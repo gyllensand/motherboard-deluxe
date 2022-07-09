@@ -2,7 +2,7 @@ import { useMemo, useRef, useEffect, useState } from "react";
 import { a } from "@react-spring/three";
 import { Color, Object3D, InstancedMesh } from "three";
 import { SHAPE_TYPES } from "./constants";
-import { CompleteObject, width } from "./Scene";
+import { Object, width } from "./Scene";
 import { useSpring, useSprings } from "react-spring";
 import { useGesture } from "react-use-gesture";
 import { useFrame } from "@react-three/fiber";
@@ -12,6 +12,21 @@ import {
   pickRandomDecimalFromInterval,
 } from "./utils";
 import { Sample } from "./App";
+
+interface ActiveShape {
+  index: number;
+  shape: number;
+}
+
+function usePrevious<T>(value: T) {
+  const ref = useRef<T>();
+
+  useEffect(() => {
+    ref.current = value;
+  }, [value]);
+
+  return ref.current;
+}
 
 const minMaxNumber = (value: number, min: number, max: number) =>
   Math.min(Math.max(value, min), max);
@@ -29,15 +44,15 @@ function updateInstancedMeshMatrices({
   scale: number;
   activeShapes?: ActiveShape[];
   tempObject: Object3D;
-  objects: CompleteObject[];
+  objects: Object[];
   aspect: number;
   isPointerDown: boolean;
 }) {
   if (!mesh || !isPointerDown) return;
-  // console.log('activeShapes', activeShapes)
+  console.log("activeShapes", activeShapes);
   let i = 0;
 
-  for (let x = 0; x < width; x++)
+  for (let x = 0; x < width; x++) {
     for (let y = 0; y < width; y++) {
       let innerId = i;
       const matchingId = activeShapes?.find(({ index }) => index === innerId);
@@ -47,65 +62,72 @@ function updateInstancedMeshMatrices({
         continue;
       }
 
-      activeShapes.forEach(({ index, shape }) => {
-        if (shape === SHAPE_TYPES.FILLED_TILTED_SQUARE) {
-          tempObject.position.set(
-            getSizeByAspect(x, aspect),
-            getSizeByAspect(y, aspect),
-            0
-          );
-          tempObject.scale.set(0.5 * scale, 0.5 * scale, 0.5);
-          tempObject.rotation.set(0, 0, Math.PI / 4);
-        } else if (shape === SHAPE_TYPES.FILLED_SQUARE_LARGE) {
-          tempObject.position.set(
-            getSizeByAspect(x + 0.5, aspect),
-            getSizeByAspect(y - 0.5, aspect),
-            0
-          );
-          tempObject.scale.set(2.43 * scale, 2.46 * scale, 1.02);
-          tempObject.rotation.set(0, 0, 0);
-        } else if (shape === SHAPE_TYPES.HOR_RECTANGLE) {
-          tempObject.position.set(
-            getSizeByAspect(x + 0.5, aspect),
-            getSizeByAspect(y, aspect),
-            0
-          );
-          tempObject.scale.set(2.43 * scale, 1.03 * scale, 1);
-          tempObject.rotation.set(0, 0, 0);
-        } else if (shape === SHAPE_TYPES.VER_RECTANGLE) {
-          tempObject.position.set(
-            getSizeByAspect(x, aspect),
-            getSizeByAspect(y - 0.5, aspect),
-            0
-          );
-          tempObject.scale.set(1.03 * scale, 2.43 * scale, 1.01);
-          tempObject.rotation.set(0, 0, 0);
-        } else {
-          tempObject.position.set(
-            getSizeByAspect(x, aspect),
-            getSizeByAspect(y, aspect),
-            0
-          );
-          tempObject.scale.set(1 * scale, 1 * scale, 1);
-          tempObject.rotation.set(0, 0, 0);
-        }
+      if (
+        objects[matchingId.index].shape === SHAPE_TYPES.FILLED_TILTED_SQUARE
+      ) {
+        tempObject.position.set(
+          getSizeByAspect(x, aspect),
+          getSizeByAspect(y, aspect),
+          0
+        );
+        tempObject.scale.set(0.5 * scale, 0.5 * scale, 0.5);
+        tempObject.rotation.set(0, 0, Math.PI / 4);
+      } else if (
+        objects[matchingId.index].shape === SHAPE_TYPES.FILLED_SQUARE_LARGE
+      ) {
+        tempObject.position.set(
+          getSizeByAspect(x + 0.5, aspect),
+          getSizeByAspect(y - 0.5, aspect),
+          0
+        );
+        tempObject.scale.set(2.43 * scale, 2.46 * scale, 1.03);
+        tempObject.rotation.set(0, 0, 0);
+      } else if (
+        objects[matchingId.index].shape === SHAPE_TYPES.HOR_RECTANGLE
+      ) {
+        tempObject.position.set(
+          getSizeByAspect(x + 0.5, aspect),
+          getSizeByAspect(y, aspect),
+          0
+        );
+        tempObject.scale.set(2.43 * scale, 1 * scale, 1.02);
+        tempObject.rotation.set(0, 0, 0);
+      } else if (
+        objects[matchingId.index].shape === SHAPE_TYPES.VER_RECTANGLE
+      ) {
+        tempObject.position.set(
+          getSizeByAspect(x, aspect),
+          getSizeByAspect(y - 0.5, aspect),
+          0
+        );
+        tempObject.scale.set(1 * scale, 2.43 * scale, 1.01);
+        tempObject.rotation.set(0, 0, 0);
+      } else {
+        tempObject.position.set(
+          getSizeByAspect(x, aspect),
+          getSizeByAspect(y, aspect),
+          0
+        );
+        tempObject.scale.set(1 * scale, 1 * scale, 1);
+        tempObject.rotation.set(0, 0, 0);
+      }
 
-        const id = innerId++;
+      // const id = innerId++;
 
-        tempObject.updateMatrix();
-        mesh.setMatrixAt(id, tempObject.matrix);
-        mesh.instanceMatrix.needsUpdate = true;
-      });
+      tempObject.updateMatrix();
+      mesh.setMatrixAt(matchingId.index, tempObject.matrix);
+      mesh.instanceMatrix.needsUpdate = true;
 
       i++;
     }
+  }
 }
 
 export function Rings({
   objects,
   aspect,
 }: {
-  objects: CompleteObject[];
+  objects: Object[];
   aspect: number;
 }) {
   const tempColor = useMemo(() => new Color(), []);
@@ -178,7 +200,7 @@ export function RingsExtra({
   objects,
   aspect,
 }: {
-  objects: CompleteObject[];
+  objects: Object[];
   aspect: number;
 }) {
   const tempColor = useMemo(() => new Color(), []);
@@ -258,7 +280,7 @@ export function RingsExtra2({
   objects,
   aspect,
 }: {
-  objects: CompleteObject[];
+  objects: Object[];
   aspect: number;
 }) {
   const tempColor = useMemo(() => new Color(), []);
@@ -338,7 +360,7 @@ export function Squares({
   objects,
   aspect,
 }: {
-  objects: CompleteObject[];
+  objects: Object[];
   aspect: number;
 }) {
   const tempColor = useMemo(() => new Color(), []);
@@ -417,7 +439,7 @@ export function SquaresExtra({
   objects,
   aspect,
 }: {
-  objects: CompleteObject[];
+  objects: Object[];
   aspect: number;
 }) {
   const tempColor = useMemo(() => new Color(), []);
@@ -513,18 +535,13 @@ export function SquaresExtra({
   );
 }
 
-interface ActiveShape {
-  index: number;
-  shape: number;
-}
-
 export function Boxes({
   objects,
   aspect,
   isPointerDown,
   hits,
 }: {
-  objects: CompleteObject[];
+  objects: Object[];
   aspect: number;
   isPointerDown: boolean;
   hits?: Sample[][];
@@ -543,52 +560,48 @@ export function Boxes({
     [tempColor, objects]
   );
 
-  const springsLength = useMemo(() => new Array(10).fill(null), []);
-
   const [springs] = useSprings(objects.length, () => ({
     scale: 1,
     config: { mass: 5, tension: 1000, friction: 50, precision: 0.0001 },
   }));
-  // console.log(objects);
-  // const [{ scale }] = useSpring(
-  //   {
-  //     scale: 1,
-  //     config: { mass: 5, tension: 1000, friction: 50, precision: 0.0001 },
-  //   },
-  //   [active]
-  // );
+
+  const prevActive = usePrevious(activeShapes);
 
   const bind = useGesture({
     onPointerOver: (e) => {
       e.event.stopPropagation();
+
       // @ts-ignore
       const id = e.event.instanceId;
 
-      // @ts-ignore
-      const intersected = objects[id].intersected;
+      if (prevActive !== undefined && prevActive?.find((o) => o.index === id)) {
+        return;
+      }
+
+      const mainCoveringIndexes = objects[id].coveringIndexes;
+      const intersected = objects.reduce<ActiveShape[]>((arr, item, index) => {
+        const match = item.coveringIndexes.filter((a) =>
+          mainCoveringIndexes.find((b) => a === b)
+        );
+
+        if (
+          match.length &&
+          item.shape !== SHAPE_TYPES.EMPTY &&
+          !arr.find((o) => o.index === item.index)
+        ) {
+          arr.push({ index: item.index, shape: item.shape });
+        }
+
+        return arr;
+      }, []);
 
       if (intersected?.length) {
-        console.log("intersected", intersected);
+        console.log(intersected);
 
-        const innerIntersect = intersected.map((intersectId) => {
-          return objects[intersectId.index].intersected;
-        });
-
-        // const innerIntersect2 = innerIntersect.map((intersectId) => {
-        //   return objects[intersectId.].intersected;
-        // });
-
-        console.log("innerIntersect", innerIntersect);
-        // console.log("innerIntersect2", innerIntersect2);
-        setActiveShapes([
-          { index: id, shape: objects[id].shape },
-          ...intersected,
-        ]);
+        setActiveShapes([...intersected]);
       } else {
         setActiveShapes([{ index: id, shape: objects[id].shape }]);
       }
-
-      console.log({ index: id, shape: objects[id].shape });
     },
     onPointerOut: (e) => {
       e.event.stopPropagation();
@@ -663,20 +676,20 @@ export function Boxes({
             getSizeByAspect(y - 0.5, aspect),
             0
           );
-          tempObject.scale.set(2.43, 2.43, 1.02);
+          tempObject.scale.set(2.43, 2.43, 1.03);
           tempObject.rotation.set(0, 0, 0);
         } else if (objects[i].shape === SHAPE_TYPES.HOR_RECTANGLE) {
           tempObject.position.set(
-            getSizeByAspect(x + 0, aspect),
+            getSizeByAspect(x + 0.5, aspect),
             getSizeByAspect(y, aspect),
             0
           );
-          tempObject.scale.set(2.43, 1, 1);
+          tempObject.scale.set(2.43, 1, 1.02);
           tempObject.rotation.set(0, 0, 0);
         } else if (objects[i].shape === SHAPE_TYPES.VER_RECTANGLE) {
           tempObject.position.set(
             getSizeByAspect(x, aspect),
-            getSizeByAspect(y - 0, aspect),
+            getSizeByAspect(y - 0.5, aspect),
             0
           );
           tempObject.scale.set(1, 2.43, 1.01);

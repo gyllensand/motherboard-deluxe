@@ -65,16 +65,14 @@ interface Intersection {
 interface ObjectMeta {
   toRemove?: number[];
   intersectedWith?: Intersection[];
+  coveringIndexes?: number[];
 }
 
-interface PreObject {
-  shape: number;
-  intersected: Intersection[];
-}
-
-export interface CompleteObject extends PreObject {
+export interface Object {
   index: number;
   composition: number;
+  coveringIndexes: number[];
+  shape: number;
   color: string;
   secondColor: string;
 }
@@ -104,23 +102,35 @@ export const shapes = new Array(width * width)
 
 const objectMeta = shapes.reduce<ObjectMeta[]>((array, shape, index) => {
   if (shape === SHAPE_TYPES.HOR_RECTANGLE) {
+    const intersectIndex = index + width;
     const isAnotherRect =
-      shapes[index + width] === SHAPE_TYPES.HOR_RECTANGLE ||
-      shapes[index + width] === SHAPE_TYPES.VER_RECTANGLE ||
-      shapes[index + width] === SHAPE_TYPES.FILLED_SQUARE_LARGE;
+      shapes[intersectIndex] === SHAPE_TYPES.HOR_RECTANGLE ||
+      shapes[intersectIndex] === SHAPE_TYPES.VER_RECTANGLE ||
+      shapes[intersectIndex] === SHAPE_TYPES.FILLED_SQUARE_LARGE;
 
-    let item: ObjectMeta = {};
-
+    const indexExists = shapes[intersectIndex];
     const lastRow = new Array(width)
       .fill(null)
       .map((o, index) => shapes.length - index, []);
 
-    if (!isAnotherRect && !lastRow.find((n) => n === index)) {
-      item = { toRemove: [index + width] };
+    const index2 = !lastRow.find((n) => n === index) ? [intersectIndex] : [];
+
+    let item: ObjectMeta = {
+      coveringIndexes: [index, ...index2],
+    };
+
+    if (!!lastRow.find((n) => n === index) || !indexExists) {
+      array.push(item);
+      return array;
+    }
+
+    if (!isAnotherRect) {
+      item = { ...item, toRemove: [intersectIndex] };
     } else {
       item = {
+        ...item,
         intersectedWith: [
-          { index: index + width, shape: shapes[index + width] },
+          { index: intersectIndex, shape: shapes[intersectIndex] },
         ],
       };
     }
@@ -130,18 +140,33 @@ const objectMeta = shapes.reduce<ObjectMeta[]>((array, shape, index) => {
   }
 
   if (shape === SHAPE_TYPES.VER_RECTANGLE) {
+    const intersectIndex = index - 1;
     const isAnotherRect =
-      shapes[index - 1] === SHAPE_TYPES.HOR_RECTANGLE ||
-      shapes[index - 1] === SHAPE_TYPES.VER_RECTANGLE ||
-      shapes[index - 1] === SHAPE_TYPES.FILLED_SQUARE_LARGE;
+      shapes[intersectIndex] === SHAPE_TYPES.HOR_RECTANGLE ||
+      shapes[intersectIndex] === SHAPE_TYPES.VER_RECTANGLE ||
+      shapes[intersectIndex] === SHAPE_TYPES.FILLED_SQUARE_LARGE;
 
-    let item: ObjectMeta = {};
+    const indexExists = shapes[intersectIndex];
+    const lastColumns = new Array(width).fill(null).map((o, i) => i * width);
+    const index2 = !lastColumns.find((n) => n === index) ? [index - 1] : [];
 
-    if (!isAnotherRect && shapes.length % index !== 0) {
-      item = { toRemove: [index - 1] };
+    let item: ObjectMeta = {
+      coveringIndexes: [index, ...index2],
+    };
+
+    if (!!lastColumns.find((n) => n === index) || !indexExists) {
+      array.push(item);
+      return array;
+    }
+
+    if (!isAnotherRect) {
+      item = { ...item, toRemove: [intersectIndex] };
     } else {
       item = {
-        intersectedWith: [{ index: index - 1, shape: shapes[index - 1] }],
+        ...item,
+        intersectedWith: [
+          { index: intersectIndex, shape: shapes[intersectIndex] },
+        ],
       };
     }
 
@@ -155,14 +180,32 @@ const objectMeta = shapes.reduce<ObjectMeta[]>((array, shape, index) => {
       shapes[index - 1] === SHAPE_TYPES.VER_RECTANGLE ||
       shapes[index - 1] === SHAPE_TYPES.FILLED_SQUARE_LARGE;
 
-    let item: ObjectMeta = {};
+    const indexExists = shapes[index - 1];
+    const lastColumns = new Array(width).fill(null).map((o, i) => i * width);
+    const lastRow = new Array(width)
+      .fill(null)
+      .map((o, index) => shapes.length - index, []);
 
-    if (!isAnotherRect && shapes.length % index !== 0) {
-      item = { toRemove: [index - 1] };
-    } else {
-      item = {
-        intersectedWith: [{ index: index - 1, shape: shapes[index - 1] }],
-      };
+    const index2 = !lastColumns.find((n) => n === index) ? [index - 1] : [];
+    const index3 = !lastRow.find((n) => n === index) ? [index + width] : [];
+    const index4 =
+      !lastColumns.find((n) => n === index) || !lastRow.find((n) => n === index)
+        ? [index + width - 1]
+        : [];
+
+    let item: ObjectMeta = {
+      coveringIndexes: [index, ...index2, ...index3, ...index4],
+    };
+
+    if (!lastColumns.find((n) => n === index) && indexExists) {
+      if (!isAnotherRect) {
+        item = { ...item, toRemove: [index - 1] };
+      } else {
+        item = {
+          ...item,
+          intersectedWith: [{ index: index - 1, shape: shapes[index - 1] }],
+        };
+      }
     }
 
     const isAnotherRect2 =
@@ -170,22 +213,24 @@ const objectMeta = shapes.reduce<ObjectMeta[]>((array, shape, index) => {
       shapes[index + width] === SHAPE_TYPES.VER_RECTANGLE ||
       shapes[index + width] === SHAPE_TYPES.FILLED_SQUARE_LARGE;
 
-    if (!isAnotherRect2 && shapes.length % index !== 0) {
-      const prevRemove = item.toRemove ? [...item.toRemove] : [];
+    if (!lastRow.find((n) => n === index) && indexExists) {
+      if (!isAnotherRect2) {
+        const prevRemove = item.toRemove ? [...item.toRemove] : [];
 
-      item = { ...item, toRemove: [...prevRemove, index + width] };
-    } else {
-      const prevIntersect = item.intersectedWith
-        ? [...item.intersectedWith]
-        : [];
+        item = { ...item, toRemove: [...prevRemove, index + width] };
+      } else {
+        const prevIntersect = item.intersectedWith
+          ? [...item.intersectedWith]
+          : [];
 
-      item = {
-        ...item,
-        intersectedWith: [
-          ...prevIntersect,
-          { index: index + width, shape: shapes[index + width] },
-        ],
-      };
+        item = {
+          ...item,
+          intersectedWith: [
+            ...prevIntersect,
+            { index: index + width, shape: shapes[index + width] },
+          ],
+        };
+      }
     }
 
     const isAnotherRect3 =
@@ -193,22 +238,28 @@ const objectMeta = shapes.reduce<ObjectMeta[]>((array, shape, index) => {
       shapes[index + width - 1] === SHAPE_TYPES.VER_RECTANGLE ||
       shapes[index + width - 1] === SHAPE_TYPES.FILLED_SQUARE_LARGE;
 
-    if (!isAnotherRect3 && shapes.length % index !== 0) {
-      const prevRemove = item.toRemove ? [...item.toRemove] : [];
+    if (
+      !lastRow.find((n) => n === index) &&
+      !lastColumns.find((n) => n === index) &&
+      indexExists
+    ) {
+      if (!isAnotherRect3) {
+        const prevRemove = item.toRemove ? [...item.toRemove] : [];
 
-      item = { ...item, toRemove: [...prevRemove, index + width - 1] };
-    } else {
-      const prevIntersect = item.intersectedWith
-        ? [...item.intersectedWith]
-        : [];
+        item = { ...item, toRemove: [...prevRemove, index + width - 1] };
+      } else {
+        const prevIntersect = item.intersectedWith
+          ? [...item.intersectedWith]
+          : [];
 
-      item = {
-        ...item,
-        intersectedWith: [
-          ...prevIntersect,
-          { index: index + width - 1, shape: shapes[index + width - 1] },
-        ],
-      };
+        item = {
+          ...item,
+          intersectedWith: [
+            ...prevIntersect,
+            { index: index + width - 1, shape: shapes[index + width - 1] },
+          ],
+        };
+      }
     }
 
     array.push(item);
@@ -251,6 +302,23 @@ const objects = filteredShapes.map((shape, i) => {
 
   const secondColor = pickRandomHash(COLORS);
   const composition = shape + currentColor.charCodeAt(6);
+  const intersected = objectMeta.filter((o) =>
+    o.coveringIndexes?.find((o) => o === i)
+  );
+
+  const coveringIndexes = intersected.reduce<number[]>((arr, o) => {
+    if (o.coveringIndexes) {
+      const trimmedIndexes = o.coveringIndexes.filter(
+        (cov) => !arr.length || arr.find((o, i) => o !== cov)
+      );
+
+      arr.push(...trimmedIndexes);
+    }
+
+    return arr;
+  }, []);
+
+  console.log("intersected", i, coveringIndexes);
 
   return {
     index: i,
@@ -258,7 +326,7 @@ const objects = filteredShapes.map((shape, i) => {
     color: currentColor,
     secondColor,
     shape,
-    intersected: objectMeta[i].intersectedWith || [],
+    coveringIndexes,
   };
 });
 
