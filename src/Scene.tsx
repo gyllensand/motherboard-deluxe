@@ -79,8 +79,7 @@ export interface Object {
 
 export const instrument = pickRandomHash(INSTRUMENTS);
 export const widthNumber = pickRandomHashNumberFromArray(WIDTH);
-// export const width = WIDTH[widthNumber];
-export const width = 4;
+export const width = WIDTH[widthNumber];
 // const boardRotation = pickRandomHash(ROTATION);
 const boardRotation = 0;
 const primaryBgColor = pickRandomHash(BG_DARK);
@@ -189,7 +188,7 @@ const objectMeta = shapes.reduce<ObjectMeta[]>((array, shape, index) => {
     const index2 = !lastColumns.find((n) => n === index) ? [index - 1] : [];
     const index3 = !lastRow.find((n) => n === index) ? [index + width] : [];
     const index4 =
-      !lastColumns.find((n) => n === index) || !lastRow.find((n) => n === index)
+      !lastColumns.find((n) => n === index) && !lastRow.find((n) => n === index)
         ? [index + width - 1]
         : [];
 
@@ -429,25 +428,55 @@ const Scene = () => {
       }
     });
 
-    const tones = objects.map(({ shape }) => {
+    const tones = objects.map(({ shape }, i) => {
       switch (shape) {
         case SHAPE_TYPES.HOR_RECTANGLE:
         case SHAPE_TYPES.VER_RECTANGLE:
           const scale = pickRandomHash(SCALES);
+          let availableHits = [...scale.sequence].filter((o, index) => {
+            return [...scale.sequence].indexOf(o) === index;
+          });
 
-          return [
-            HITS[pickRandomHash(scale.sequence)],
-            HITS[pickRandomHash(scale.sequence)],
-          ];
+          const samples = new Array(2).fill(null).reduce<Sample[]>((arr) => {
+            const currentHit = HITS[pickRandomHash(availableHits)];
+
+            if (!currentHit) {
+              return arr;
+            }
+
+            const filtered = availableHits.filter(
+              (o) => o !== currentHit.index
+            );
+            availableHits = filtered;
+
+            arr.push(currentHit);
+            return arr;
+          }, []);
+          console.log("availableHits", i, availableHits);
+          return samples;
         case SHAPE_TYPES.FILLED_SQUARE_LARGE:
           const scale2 = pickRandomHash(SCALES);
+          let availableHits2 = [...scale2.sequence].filter((o, index) => {
+            return [...scale2.sequence].indexOf(o) === index;
+          });
 
-          return [
-            HITS[pickRandomHash(scale2.sequence)],
-            HITS[pickRandomHash(scale2.sequence)],
-            HITS[pickRandomHash(scale2.sequence)],
-            BASS[scale2.index],
-          ];
+          const samples2 = new Array(3).fill(null).reduce<Sample[]>((arr) => {
+            const currentHit = HITS[pickRandomHash(availableHits2)];
+
+            if (!currentHit) {
+              return arr;
+            }
+
+            const filtered = availableHits2.filter(
+              (o) => o !== currentHit.index
+            );
+            availableHits2 = filtered;
+
+            arr.push(currentHit);
+            return arr;
+          }, []);
+
+          return [...samples2, BASS[scale2.index]];
         default:
           return [pickRandomHash(HITS)];
       }

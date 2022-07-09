@@ -49,7 +49,7 @@ function updateInstancedMeshMatrices({
   isPointerDown: boolean;
 }) {
   if (!mesh || !isPointerDown) return;
-  console.log("activeShapes", activeShapes);
+
   let i = 0;
 
   for (let x = 0; x < width; x++) {
@@ -80,7 +80,13 @@ function updateInstancedMeshMatrices({
           getSizeByAspect(y - 0.5, aspect),
           0
         );
-        tempObject.scale.set(2.43 * scale, 2.46 * scale, 1.03);
+
+        const activeScale =
+          activeShapes.length > 1
+            ? 2.44 * minMaxNumber(scale / 1.07, 1, 2)
+            : (2.44 * scale) / 1.03;
+
+        tempObject.scale.set(activeScale, activeScale, 1.03);
         tempObject.rotation.set(0, 0, 0);
       } else if (
         objects[matchingId.index].shape === SHAPE_TYPES.HOR_RECTANGLE
@@ -90,7 +96,18 @@ function updateInstancedMeshMatrices({
           getSizeByAspect(y, aspect),
           0
         );
-        tempObject.scale.set(2.43 * scale, 1 * scale, 1.02);
+
+        const activeScale =
+          activeShapes.length > 1
+            ? 2.43 * minMaxNumber(scale / 1.2, 1, 2)
+            : 2.43 * scale;
+
+        const activeScale2 =
+          activeShapes.length > 1
+            ? 1.01 * minMaxNumber(scale / 1, 1, 2)
+            : 1.01 * scale;
+
+        tempObject.scale.set(activeScale, activeScale2, 1.02);
         tempObject.rotation.set(0, 0, 0);
       } else if (
         objects[matchingId.index].shape === SHAPE_TYPES.VER_RECTANGLE
@@ -100,7 +117,13 @@ function updateInstancedMeshMatrices({
           getSizeByAspect(y - 0.5, aspect),
           0
         );
-        tempObject.scale.set(1 * scale, 2.43 * scale, 1.01);
+
+        const activeScale =
+          activeShapes.length > 1
+            ? 2.43 * minMaxNumber(scale / 1.5, 1, 2)
+            : 2.43 * scale;
+
+        tempObject.scale.set(1.01 * scale, activeScale, 1.01);
         tempObject.rotation.set(0, 0, 0);
       } else {
         tempObject.position.set(
@@ -111,8 +134,6 @@ function updateInstancedMeshMatrices({
         tempObject.scale.set(1 * scale, 1 * scale, 1);
         tempObject.rotation.set(0, 0, 0);
       }
-
-      // const id = innerId++;
 
       tempObject.updateMatrix();
       mesh.setMatrixAt(matchingId.index, tempObject.matrix);
@@ -562,7 +583,13 @@ export function Boxes({
 
   const [springs] = useSprings(objects.length, () => ({
     scale: 1,
-    config: { mass: 5, tension: 1000, friction: 50, precision: 0.0001 },
+    config: {
+      mass: 5,
+      tension: 1000,
+      friction: 50,
+      precision: 0.0001,
+      clamp: true,
+    },
   }));
 
   const prevActive = usePrevious(activeShapes);
@@ -573,10 +600,10 @@ export function Boxes({
 
       // @ts-ignore
       const id = e.event.instanceId;
-
-      if (prevActive !== undefined && prevActive?.find((o) => o.index === id)) {
-        return;
-      }
+      // console.log("prevActive", prevActive);
+      // if (prevActive !== undefined && prevActive?.find((o) => o.index === id)) {
+      //   return;
+      // }
 
       const mainCoveringIndexes = objects[id].coveringIndexes;
       const intersected = objects.reduce<ActiveShape[]>((arr, item, index) => {
@@ -596,8 +623,6 @@ export function Boxes({
       }, []);
 
       if (intersected?.length) {
-        console.log(intersected);
-
         setActiveShapes([...intersected]);
       } else {
         setActiveShapes([{ index: id, shape: objects[id].shape }]);
@@ -648,6 +673,7 @@ export function Boxes({
     });
 
     let i = 0;
+    let combinedHits = [];
 
     for (let x = 0; x < width; x++) {
       for (let y = 0; y < width; y++) {
@@ -676,7 +702,7 @@ export function Boxes({
             getSizeByAspect(y - 0.5, aspect),
             0
           );
-          tempObject.scale.set(2.43, 2.43, 1.03);
+          tempObject.scale.set(2.44, 2.44, 1.03);
           tempObject.rotation.set(0, 0, 0);
         } else if (objects[i].shape === SHAPE_TYPES.HOR_RECTANGLE) {
           tempObject.position.set(
@@ -684,7 +710,7 @@ export function Boxes({
             getSizeByAspect(y, aspect),
             0
           );
-          tempObject.scale.set(2.43, 1, 1.02);
+          tempObject.scale.set(2.43, 1.01, 1.02);
           tempObject.rotation.set(0, 0, 0);
         } else if (objects[i].shape === SHAPE_TYPES.VER_RECTANGLE) {
           tempObject.position.set(
@@ -692,7 +718,7 @@ export function Boxes({
             getSizeByAspect(y - 0.5, aspect),
             0
           );
-          tempObject.scale.set(1, 2.43, 1.01);
+          tempObject.scale.set(1.01, 2.43, 1.01);
           tempObject.rotation.set(0, 0, 0);
         } else {
           tempObject.position.set(
@@ -704,19 +730,47 @@ export function Boxes({
           tempObject.rotation.set(0, 0, 0);
         }
 
-        const id = i++;
+        const id = i;
 
-        // if (id === active && hits && isPointerDown) {
-        //   hits[id].forEach((hit) => {
-        //     hit.sampler.triggerAttack("C#-1");
-        //   });
-        // }
+        if (
+          !!activeShapes?.find((active) => id === active.index) &&
+          hits &&
+          isPointerDown
+        ) {
+          const currentHits = hits[id].reduce<Sample[]>((hits, hit) => {
+            if (!hits.find((o) => o.index === hit.index)) {
+              hits.push(hit);
+            }
+
+            return hits;
+          }, []);
+
+          combinedHits.push([...currentHits]);
+        }
+
+        i++;
 
         tempObject.updateMatrix();
         meshRef.current!.geometry.attributes.color.needsUpdate = true;
         meshRef.current!.setMatrixAt(id, tempObject.matrix);
       }
     }
+
+    const filteredSingleHits = combinedHits
+      .flat()
+      .reduce<Sample[]>((arr, item) => {
+        if (!arr.find((o) => o.index === item.index)) {
+          arr.push(item);
+        }
+
+        return arr;
+      }, []);
+
+    console.log("filteredSingleHits", activeShapes, filteredSingleHits);
+
+    filteredSingleHits.forEach((hit) => {
+      hit.sampler.triggerAttack("C#-1");
+    });
 
     meshRef.current!.instanceMatrix.needsUpdate = true;
   }, [
