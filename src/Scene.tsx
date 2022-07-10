@@ -1,14 +1,6 @@
 import { GradientTexture, OrbitControls } from "@react-three/drei";
 import { useThree } from "@react-three/fiber";
-import { a, SpringValue } from "@react-spring/three";
-import {
-  MutableRefObject,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PointLight, Vector3 } from "three";
 import {
   AMBIENT_LIGHT_INTENSITY,
@@ -47,8 +39,8 @@ import {
 import { BlendFunction } from "postprocessing";
 import { BASS, HITS, Sample } from "./App";
 import { Destination, Filter, start } from "tone";
+import Boxes from "./Boxes";
 import {
-  Boxes,
   Rings,
   RingsExtra,
   RingsExtra2,
@@ -56,15 +48,10 @@ import {
   SquaresExtra,
 } from "./Shapes";
 import { useSpring } from "react-spring";
-
-interface Intersection {
-  index: number;
-  shape: number;
-}
+import Lights from "./Lights";
 
 interface ObjectMeta {
   toRemove?: number[];
-  intersectedWith?: Intersection[];
   coveringIndexes?: number[];
 }
 
@@ -112,7 +99,8 @@ const objectMeta = shapes.reduce<ObjectMeta[]>((array, shape, index) => {
       .fill(null)
       .map((o, index) => shapes.length - index, []);
 
-    const index2 = !lastRow.find((n) => n === index) ? [intersectIndex] : [];
+    const index2 =
+      lastRow.find((n) => n === index) === undefined ? [intersectIndex] : [];
 
     let item: ObjectMeta = {
       coveringIndexes: [index, ...index2],
@@ -125,13 +113,6 @@ const objectMeta = shapes.reduce<ObjectMeta[]>((array, shape, index) => {
 
     if (!isAnotherRect) {
       item = { ...item, toRemove: [intersectIndex] };
-    } else {
-      item = {
-        ...item,
-        intersectedWith: [
-          { index: intersectIndex, shape: shapes[intersectIndex] },
-        ],
-      };
     }
 
     array.push(item);
@@ -147,26 +128,20 @@ const objectMeta = shapes.reduce<ObjectMeta[]>((array, shape, index) => {
 
     const indexExists = shapes[intersectIndex];
     const lastColumns = new Array(width).fill(null).map((o, i) => i * width);
-    const index2 = !lastColumns.find((n) => n === index) ? [index - 1] : [];
+    const index2 =
+      lastColumns.find((n) => n === index) === undefined ? [index - 1] : [];
 
     let item: ObjectMeta = {
       coveringIndexes: [index, ...index2],
     };
 
-    if (!!lastColumns.find((n) => n === index) || !indexExists) {
+    if (lastColumns.find((n) => n === index) !== undefined || !indexExists) {
       array.push(item);
       return array;
     }
 
     if (!isAnotherRect) {
       item = { ...item, toRemove: [intersectIndex] };
-    } else {
-      item = {
-        ...item,
-        intersectedWith: [
-          { index: intersectIndex, shape: shapes[intersectIndex] },
-        ],
-      };
     }
 
     array.push(item);
@@ -180,15 +155,25 @@ const objectMeta = shapes.reduce<ObjectMeta[]>((array, shape, index) => {
       shapes[index - 1] === SHAPE_TYPES.FILLED_SQUARE_LARGE;
 
     const indexExists = shapes[index - 1];
+    const indexExists2 = shapes[index + width];
+    const indexExists3 = shapes[index + width - 1];
     const lastColumns = new Array(width).fill(null).map((o, i) => i * width);
     const lastRow = new Array(width)
       .fill(null)
       .map((o, index) => shapes.length - index, []);
 
-    const index2 = !lastColumns.find((n) => n === index) ? [index - 1] : [];
-    const index3 = !lastRow.find((n) => n === index) ? [index + width] : [];
+    const index2 =
+      lastColumns.find((n) => n === index) === undefined && indexExists
+        ? [index - 1]
+        : [];
+    const index3 =
+      lastRow.find((n) => n === index) === undefined && indexExists2
+        ? [index + width]
+        : [];
     const index4 =
-      !lastColumns.find((n) => n === index) && !lastRow.find((n) => n === index)
+      lastColumns.find((n) => n === index) === undefined &&
+      lastRow.find((n) => n === index) === undefined &&
+      indexExists3
         ? [index + width - 1]
         : [];
 
@@ -196,15 +181,12 @@ const objectMeta = shapes.reduce<ObjectMeta[]>((array, shape, index) => {
       coveringIndexes: [index, ...index2, ...index3, ...index4],
     };
 
-    if (!lastColumns.find((n) => n === index) && indexExists) {
-      if (!isAnotherRect) {
-        item = { ...item, toRemove: [index - 1] };
-      } else {
-        item = {
-          ...item,
-          intersectedWith: [{ index: index - 1, shape: shapes[index - 1] }],
-        };
-      }
+    if (
+      lastColumns.find((n) => n === index) === undefined &&
+      indexExists &&
+      !isAnotherRect
+    ) {
+      item = { ...item, toRemove: [index - 1] };
     }
 
     const isAnotherRect2 =
@@ -212,24 +194,13 @@ const objectMeta = shapes.reduce<ObjectMeta[]>((array, shape, index) => {
       shapes[index + width] === SHAPE_TYPES.VER_RECTANGLE ||
       shapes[index + width] === SHAPE_TYPES.FILLED_SQUARE_LARGE;
 
-    if (!lastRow.find((n) => n === index) && indexExists) {
-      if (!isAnotherRect2) {
-        const prevRemove = item.toRemove ? [...item.toRemove] : [];
-
-        item = { ...item, toRemove: [...prevRemove, index + width] };
-      } else {
-        const prevIntersect = item.intersectedWith
-          ? [...item.intersectedWith]
-          : [];
-
-        item = {
-          ...item,
-          intersectedWith: [
-            ...prevIntersect,
-            { index: index + width, shape: shapes[index + width] },
-          ],
-        };
-      }
+    if (
+      lastRow.find((n) => n === index) === undefined &&
+      indexExists2 &&
+      !isAnotherRect2
+    ) {
+      const prevRemove = item.toRemove ? [...item.toRemove] : [];
+      item = { ...item, toRemove: [...prevRemove, index + width] };
     }
 
     const isAnotherRect3 =
@@ -238,27 +209,13 @@ const objectMeta = shapes.reduce<ObjectMeta[]>((array, shape, index) => {
       shapes[index + width - 1] === SHAPE_TYPES.FILLED_SQUARE_LARGE;
 
     if (
-      !lastRow.find((n) => n === index) &&
-      !lastColumns.find((n) => n === index) &&
-      indexExists
+      lastRow.find((n) => n === index) === undefined &&
+      lastColumns.find((n) => n === index) === undefined &&
+      indexExists3 &&
+      !isAnotherRect3
     ) {
-      if (!isAnotherRect3) {
-        const prevRemove = item.toRemove ? [...item.toRemove] : [];
-
-        item = { ...item, toRemove: [...prevRemove, index + width - 1] };
-      } else {
-        const prevIntersect = item.intersectedWith
-          ? [...item.intersectedWith]
-          : [];
-
-        item = {
-          ...item,
-          intersectedWith: [
-            ...prevIntersect,
-            { index: index + width - 1, shape: shapes[index + width - 1] },
-          ],
-        };
-      }
+      const prevRemove = item.toRemove ? [...item.toRemove] : [];
+      item = { ...item, toRemove: [...prevRemove, index + width - 1] };
     }
 
     array.push(item);
@@ -273,7 +230,8 @@ console.log("objectMeta", objectMeta);
 
 const filteredShapes = shapes.map((shape, i) => {
   const needsRemoval =
-    objectMeta.filter((o) => o.toRemove?.find((r) => r === i)).length > 0;
+    objectMeta.filter((o) => o.toRemove?.find((r) => r === i) !== undefined)
+      .length > 0;
 
   if (needsRemoval) {
     return SHAPE_TYPES.EMPTY;
@@ -282,9 +240,9 @@ const filteredShapes = shapes.map((shape, i) => {
   return shape;
 });
 
-console.log("shapes", shapes);
-console.log("filteredShapes", filteredShapes);
-
+// console.log("shapes", shapes);
+// console.log("filteredShapes", filteredShapes);
+// console.log("light", mainTheme);
 const objects = filteredShapes.map((shape, i) => {
   const color1 = pickRandomColorWithTheme(themeColor, shapes.length);
   const color2 = pickRandomColorWithTheme(themeColor2, shapes.length);
@@ -301,23 +259,6 @@ const objects = filteredShapes.map((shape, i) => {
 
   const secondColor = pickRandomHash(COLORS);
   const composition = shape + currentColor.charCodeAt(6);
-  const intersected = objectMeta.filter((o) =>
-    o.coveringIndexes?.find((o) => o === i)
-  );
-
-  const coveringIndexes = intersected.reduce<number[]>((arr, o) => {
-    if (o.coveringIndexes) {
-      const trimmedIndexes = o.coveringIndexes.filter(
-        (cov) => !arr.length || arr.find((o, i) => o !== cov)
-      );
-
-      arr.push(...trimmedIndexes);
-    }
-
-    return arr;
-  }, []);
-
-  console.log("intersected", i, coveringIndexes);
 
   return {
     index: i,
@@ -325,7 +266,7 @@ const objects = filteredShapes.map((shape, i) => {
     color: currentColor,
     secondColor,
     shape,
-    coveringIndexes,
+    coveringIndexes: objectMeta[i].coveringIndexes || [],
   };
 });
 
@@ -346,53 +287,6 @@ window.$fxhashFeatures = {
   ),
 };
 
-function Lights({
-  aspect,
-  lightRef,
-  lightSpring,
-}: {
-  aspect: number;
-  lightRef: MutableRefObject<PointLight | undefined>;
-  lightSpring: {
-    flashLight: SpringValue<number>;
-    roomLight: SpringValue<number>;
-    ambientLight: SpringValue<number>;
-  };
-}) {
-  return (
-    <group
-      scale={[
-        getSizeByAspect(1, aspect),
-        getSizeByAspect(1, aspect),
-        getSizeByAspect(1, aspect),
-      ]}
-    >
-      {/*
-      // @ts-ignore */}
-      <a.ambientLight intensity={lightSpring.ambientLight} color={"#ffffff"} />
-
-      {/* // @ts-ignore
-       */}
-      <a.pointLight
-        position={[0, 0, -30]}
-        color={"#ffffff"}
-        intensity={lightSpring.roomLight}
-      />
-
-      {/* // @ts-ignore
-       */}
-      <a.pointLight
-        ref={lightRef}
-        position={[0, 0, -10]}
-        color={flashLightColor}
-        intensity={lightSpring.flashLight}
-        decay={2}
-        distance={2}
-      />
-    </group>
-  );
-}
-
 const Scene = () => {
   const { viewport, aspect, camera } = useThree((state) => ({
     viewport: state.viewport,
@@ -400,16 +294,11 @@ const Scene = () => {
     camera: state.camera,
   }));
 
-  const lightRef = useRef<PointLight>();
+  const flashLightRef = useRef<PointLight>();
   const [isPointerDown, setIsPointerDown] = useState(false);
+  const [isPointerIdle, setIsPointerIdle] = useState(true);
   const toneInitialized = useRef(false);
-  const [lastPlayedScale, setLastPlayedScale] = useState<number>();
   const [hits, setHits] = useState<Sample[][]>();
-  const availableScales = useMemo(
-    () => SCALES.filter(({ index }) => index !== lastPlayedScale),
-    [lastPlayedScale]
-  );
-
   const [lightSpring, setLightSpring] = useSpring(() => ({
     flashLight: 0,
     roomLight: 1,
@@ -428,53 +317,37 @@ const Scene = () => {
       }
     });
 
+    const setupTones = (sequence: number[], amount: number) => {
+      let availableHits = [...sequence].filter((o, index) => {
+        return [...sequence].indexOf(o) === index;
+      });
+
+      return new Array(amount).fill(null).reduce<Sample[]>((arr) => {
+        const currentHit = HITS[pickRandomHash(availableHits)];
+
+        if (!currentHit) {
+          return arr;
+        }
+
+        const filtered = availableHits.filter((o) => o !== currentHit.index);
+        availableHits = filtered;
+
+        arr.push(currentHit);
+        return arr;
+      }, []);
+    };
+
     const tones = objects.map(({ shape }, i) => {
       switch (shape) {
         case SHAPE_TYPES.HOR_RECTANGLE:
         case SHAPE_TYPES.VER_RECTANGLE:
           const scale = pickRandomHash(SCALES);
-          let availableHits = [...scale.sequence].filter((o, index) => {
-            return [...scale.sequence].indexOf(o) === index;
-          });
+          const samples = setupTones(scale.sequence, 2);
 
-          const samples = new Array(2).fill(null).reduce<Sample[]>((arr) => {
-            const currentHit = HITS[pickRandomHash(availableHits)];
-
-            if (!currentHit) {
-              return arr;
-            }
-
-            const filtered = availableHits.filter(
-              (o) => o !== currentHit.index
-            );
-            availableHits = filtered;
-
-            arr.push(currentHit);
-            return arr;
-          }, []);
-          console.log("availableHits", i, availableHits);
           return samples;
         case SHAPE_TYPES.FILLED_SQUARE_LARGE:
           const scale2 = pickRandomHash(SCALES);
-          let availableHits2 = [...scale2.sequence].filter((o, index) => {
-            return [...scale2.sequence].indexOf(o) === index;
-          });
-
-          const samples2 = new Array(3).fill(null).reduce<Sample[]>((arr) => {
-            const currentHit = HITS[pickRandomHash(availableHits2)];
-
-            if (!currentHit) {
-              return arr;
-            }
-
-            const filtered = availableHits2.filter(
-              (o) => o !== currentHit.index
-            );
-            availableHits2 = filtered;
-
-            arr.push(currentHit);
-            return arr;
-          }, []);
+          const samples2 = setupTones(scale2.sequence, 3);
 
           return [...samples2, BASS[scale2.index]];
         default:
@@ -499,6 +372,8 @@ const Scene = () => {
         y: -(event.clientY / window.innerHeight) * 2 + 1,
       };
       // console.log(aspect);
+
+      // put aspect as 1, perhaps it will keep square aspect
       const cameraPosition = new Vector3(
         aspect > 1 ? camera.position.x : camera.position.x / aspect,
         aspect > 1 ? camera.position.y : camera.position.y * aspect,
@@ -512,7 +387,9 @@ const Scene = () => {
       const distance = -cameraPosition.z / dir.z;
       const pos = cameraPosition.clone().add(dir.multiplyScalar(distance));
 
-      lightRef.current?.position.copy(new Vector3(pos.x, pos.y, pos.z - 1));
+      flashLightRef.current?.position.copy(
+        new Vector3(pos.x, pos.y, pos.z - 1)
+      );
     },
     [camera, aspect]
   );
@@ -550,6 +427,8 @@ const Scene = () => {
     return (
       // @ts-ignore
       <mesh
+        onPointerEnter={() => setIsPointerIdle(true)}
+        onPointerLeave={() => setIsPointerIdle(false)}
         position={[0, 0, getSizeByAspect(0.1, aspect)]}
         rotation={[Math.PI, 0, Math.PI / 4]}
       >
@@ -561,14 +440,8 @@ const Scene = () => {
         />
         <meshBasicMaterial>
           <GradientTexture
-            // stops={[0, 0.25, 0.75, 1]}
             stops={[0, 1]}
-            colors={[
-              secondaryBgColor,
-              primaryBgColor,
-              // primaryBgColor,
-              // secondaryBgColor,
-            ]}
+            colors={[secondaryBgColor, primaryBgColor]}
             size={1024}
           />
         </meshBasicMaterial>
@@ -578,10 +451,15 @@ const Scene = () => {
 
   return (
     <>
-      {/* <color attach="background" args={[primaryBgColor]} /> */}
       <OrbitControls enabled={false} />
       {renderBackground()}
-      <Lights aspect={aspect} lightRef={lightRef} lightSpring={lightSpring} />
+      <Lights
+        aspect={aspect}
+        flashLightRef={flashLightRef}
+        lightSpring={lightSpring}
+        mainTheme={mainTheme}
+        flashLightColor={flashLightColor}
+      />
       <group rotation={[0, 0, boardRotation]}>
         <group
           position={[
@@ -595,6 +473,7 @@ const Scene = () => {
             aspect={aspect}
             hits={hits}
             isPointerDown={isPointerDown}
+            isPointerIdle={isPointerIdle}
           />
           <Squares objects={objects} aspect={aspect} />
           <SquaresExtra objects={objects} aspect={aspect} />

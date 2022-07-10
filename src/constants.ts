@@ -29,12 +29,9 @@ export enum SHAPE_TYPES {
   HOR_RECTANGLE = 8,
   VER_RECTANGLE = 9,
   FILLED_SQUARE_LARGE = 10,
-  HOR_LINE = 12,
-  VER_LINE = 12,
 }
 
 export const SHAPES = [
-  // ...new Array(30).fill(null).map(() => 0),
   ...new Array(20).fill(null).map(() => 1),
   ...new Array(3).fill(null).map(() => 2),
   ...new Array(3).fill(null).map(() => 3),
@@ -45,8 +42,6 @@ export const SHAPES = [
   ...new Array(3).fill(null).map(() => 8),
   ...new Array(3).fill(null).map(() => 9),
   ...new Array(1).fill(null).map(() => 10),
-  // ...new Array(3).fill(null).map(() => 9),
-  // ...new Array(3).fill(null).map(() => 10),
 ];
 
 export const SHAPE_METALNESS = [0.5, 0.75];
@@ -137,20 +132,13 @@ export const COLORS = [
 ];
 
 export const LIGHT_THEMES = [
-  "#ffffff",
-  "#ffffff",
-  "#ffffff",
-  "#ffffff",
-  "#ffffff",
-  "#ffffff",
-  "#ffffff",
-  "#ffce00",
-  "#eb3434",
-  "#fe7418",
-  "#f97b9c",
-  "#497fff",
-  "#1b4225",
-  "#1b3342",
+  ...new Array(60).fill(null).map(() => "#ffffff"),
+  "#A2CCB6",
+  "#FCEEB5",
+  "#EE786E",
+  "#e0feff",
+  "lightpink",
+  "lightblue",
 ];
 
 export const FLASH_LIGHT_COLORS = [

@@ -77,3 +77,6 @@ export const easeInOutSine = (t: number, b: number, _c: number, d: number) => {
   var c = _c - b;
   return (-c / 2) * (Math.cos((Math.PI * t) / d) - 1) + b;
 };
+
+export const minMaxNumber = (value: number, min: number, max: number) =>
+  Math.min(Math.max(value, min), max);
