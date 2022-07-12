@@ -41,15 +41,15 @@ export const SHAPES = [
   ...new Array(3).fill(null).map(() => 7),
   ...new Array(3).fill(null).map(() => 8),
   ...new Array(3).fill(null).map(() => 9),
-  ...new Array(1).fill(null).map(() => 10),
+  ...new Array(2).fill(null).map(() => 10),
 ];
 
 export const SHAPE_METALNESS = [0.5, 0.75];
 export const SHAPE_ROUGHNESS = [0.75, 1];
 
-export const WIDTH = [10, 12, 14];
+export const WIDTH = [10, 11, 12, 13, 14];
 export const SIZE = 1;
-export const ZOOM = [-8, -10, -11];
+export const ZOOM = [-8, -9, -10, -11, -11.5];
 
 export const AMBIENT_LIGHT_INTENSITY = [1.5, 2];
 export const POINT_LIGHT_INTENSITY = [0.5, 0.7, 0.9];

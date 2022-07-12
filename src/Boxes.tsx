@@ -13,16 +13,6 @@ interface ActiveShape {
   shape: number;
 }
 
-function usePrevious<T>(value: T) {
-  const ref = useRef<T>();
-
-  useEffect(() => {
-    ref.current = value;
-  }, [value]);
-
-  return ref;
-}
-
 function updateInstancedMeshMatrices({
   mesh,
   scale,
@@ -49,7 +39,11 @@ function updateInstancedMeshMatrices({
       let innerId = i;
       const matchingId = activeShapes?.find(({ index }) => index === innerId);
 
-      if (!activeShapes || matchingId === undefined) {
+      if (
+        !activeShapes ||
+        matchingId === undefined ||
+        objects[i].shape === SHAPE_TYPES.FILLED_TILTED_SQUARE
+      ) {
         i++;
         continue;
       }
@@ -75,8 +69,8 @@ function updateInstancedMeshMatrices({
 
         const activeScale =
           activeShapes.length > 1
-            ? 2.44 * minMaxNumber(scale / 1.07, 1, 2)
-            : (2.44 * scale) / 1.03;
+            ? 2.43 * minMaxNumber(scale / 1.07, 1, 2)
+            : 2.43 * scale;
 
         tempObject.scale.set(activeScale, activeScale, 1.03);
         tempObject.rotation.set(0, 0, 0);
@@ -91,15 +85,10 @@ function updateInstancedMeshMatrices({
 
         const activeScale =
           activeShapes.length > 1
-            ? 2.43 * minMaxNumber(scale / 1.2, 1, 2)
+            ? 2.43 * minMaxNumber(scale / 1.1, 1, 2)
             : 2.43 * scale;
 
-        const activeScale2 =
-          activeShapes.length > 1
-            ? 1.01 * minMaxNumber(scale / 1, 1, 2)
-            : 1.01 * scale;
-
-        tempObject.scale.set(activeScale, activeScale2, 1.02);
+        tempObject.scale.set(activeScale, 1.01 * scale, 1.02);
         tempObject.rotation.set(0, 0, 0);
       } else if (
         objects[matchingId.index].shape === SHAPE_TYPES.VER_RECTANGLE
@@ -112,7 +101,7 @@ function updateInstancedMeshMatrices({
 
         const activeScale =
           activeShapes.length > 1
-            ? 2.43 * minMaxNumber(scale / 1.5, 1, 2)
+            ? 2.43 * minMaxNumber(scale / 1.1, 1, 2)
             : 2.43 * scale;
 
         tempObject.scale.set(1.01 * scale, activeScale, 1.01);
@@ -136,17 +125,56 @@ function updateInstancedMeshMatrices({
   }
 }
 
+const getIntersectingIndexesFromId = (
+  id: number,
+  objects: Object[]
+): ActiveShape[] => {
+  const mainCoveringIndexes = objects[id].coveringIndexes;
+  let sum: { index: number; coveringIndexes: number[] }[] = [
+    { index: id, coveringIndexes: mainCoveringIndexes },
+  ];
+
+  const iterateCoverIndexes = () => {
+    for (let i = 0; i < objects.length; i++) {
+      const match = objects[i].coveringIndexes.filter(
+        (a) => sum.find((b) => b.coveringIndexes.indexOf(a) >= 0) !== undefined
+      );
+
+      const alreadyExists = sum.find((o) => o.index === i) !== undefined;
+
+      if (
+        match.length &&
+        objects[i].shape !== SHAPE_TYPES.EMPTY &&
+        !alreadyExists
+      ) {
+        sum.push({ index: i, coveringIndexes: objects[i].coveringIndexes });
+        iterateCoverIndexes();
+        break;
+      }
+    }
+  };
+
+  iterateCoverIndexes();
+
+  const intersectedShapes = sum.map((o) => ({
+    index: o.index,
+    shape: objects[o.index].shape,
+  }));
+
+  return intersectedShapes;
+};
+
 const Boxes = ({
   objects,
   aspect,
   isPointerDown,
-  isPointerIdle,
+  isPointerOnBg,
   hits,
 }: {
   objects: Object[];
   aspect: number;
   isPointerDown: boolean;
-  isPointerIdle: boolean;
+  isPointerOnBg: boolean;
   hits?: Sample[][];
 }) => {
   const tempColor = useMemo(() => new Color(), []);
@@ -163,10 +191,11 @@ const Boxes = ({
     [tempColor, objects]
   );
 
-  const [springs] = useSprings(objects.length, () => ({
+  const [springs] = useSprings(objects.length, (i) => ({
     scale: 1,
     config: {
       mass: 5,
+      // mass: objects[i].shape === SHAPE_TYPES.FILLED_SQUARE_LARGE ? 100 : 5,
       tension: 1000,
       friction: 50,
       precision: 0.0001,
@@ -174,7 +203,13 @@ const Boxes = ({
     },
   }));
 
-  const prevPointerOut = useRef<number>();
+  const prevPointerOut = useRef<ActiveShape[]>();
+
+  useEffect(() => {
+    if (isPointerOnBg) {
+      prevPointerOut.current = undefined;
+    }
+  }, [isPointerOnBg]);
 
   const bind = useGesture({
     onPointerOver: (e) => {
@@ -182,53 +217,40 @@ const Boxes = ({
 
       // @ts-ignore
       const id = e.event.instanceId;
-      const mainCoveringIndexes = objects[id].coveringIndexes;
-      let sum: { index: number; coveringIndexes: number[] }[] = [
-        { index: id, coveringIndexes: mainCoveringIndexes },
-      ];
+      const intersectedIds = getIntersectingIndexesFromId(id, objects);
 
-      const iterateCoverIndexes = () => {
-        for (let i = 0; i < objects.length; i++) {
-          const match = objects[i].coveringIndexes.filter(
-            (a) =>
-              sum.find((b) => b.coveringIndexes.indexOf(a) >= 0) !== undefined
-          );
-
-          const alreadyExists = sum.find((o) => o.index === i) !== undefined;
-
-          if (
-            match.length &&
-            objects[i].shape !== SHAPE_TYPES.EMPTY &&
-            !alreadyExists
-          ) {
-            sum.push({ index: i, coveringIndexes: objects[i].coveringIndexes });
-            iterateCoverIndexes();
-            break;
-          }
-        }
-      };
-
-      iterateCoverIndexes();
-
-      const intersectedIds = sum.map((o) => ({
-        index: o.index,
-        shape: objects[o.index].shape,
-      }));
-
-      if (
-        isPointerIdle ||
-        intersectedIds.find((o) => o.index === prevPointerOut.current) ===
-          undefined
-      ) {
+      if (!prevPointerOut.current) {
         setActiveShapes([...intersectedIds]);
       }
     },
     onPointerOut: (e) => {
       e.event.stopPropagation();
+
       // @ts-ignore
       const id = e.event.instanceId;
-      prevPointerOut.current = id;
+      const intersectedIds = getIntersectingIndexesFromId(id, objects);
+      prevPointerOut.current = intersectedIds;
       setActiveShapes(undefined);
+    },
+    onPointerDown: (e) => {
+      if (activeShapes) {
+        return;
+      }
+
+      // @ts-ignore
+      const id = e.event.instanceId;
+      const intersectedIds = getIntersectingIndexesFromId(id, objects);
+      setActiveShapes([...intersectedIds]);
+    },
+    onPointerUp: (e) => {
+      if (activeShapes) {
+        return;
+      }
+
+      // @ts-ignore
+      const id = e.event.instanceId;
+      const intersectedIds = getIntersectingIndexesFromId(id, objects);
+      setActiveShapes([...intersectedIds]);
     },
   });
 
@@ -300,7 +322,7 @@ const Boxes = ({
             getSizeByAspect(y - 0.5, aspect),
             0
           );
-          tempObject.scale.set(2.44, 2.44, 1.03);
+          tempObject.scale.set(2.43, 2.43, 1.03);
           tempObject.rotation.set(0, 0, 0);
         } else if (objects[i].shape === SHAPE_TYPES.HOR_RECTANGLE) {
           tempObject.position.set(
@@ -331,16 +353,19 @@ const Boxes = ({
         const id = i;
 
         if (
+          !!activeShapes?.find(
+            (active) => active.shape !== SHAPE_TYPES.FILLED_TILTED_SQUARE
+          ) &&
           !!activeShapes?.find((active) => id === active.index) &&
           hits &&
           isPointerDown
         ) {
-          const currentHits = hits[id].reduce<Sample[]>((hits, hit) => {
-            if (!hits.find((o) => o.index === hit.index)) {
-              hits.push(hit);
+          const currentHits = hits[id].reduce<Sample[]>((hitsArray, hit, i) => {
+            if (hitsArray.find((o) => o.index === hit.index) === undefined) {
+              hitsArray.push(hit);
             }
 
-            return hits;
+            return hitsArray;
           }, []);
 
           combinedHits.push([...currentHits]);
@@ -357,14 +382,18 @@ const Boxes = ({
     const filteredSingleHits = combinedHits
       .flat()
       .reduce<Sample[]>((arr, item) => {
-        if (!arr.find((o) => o.index === item.index)) {
+        const alreadyHasBass = arr.find((o) => o.index >= 100) !== undefined;
+
+        if (item.index >= 100 && alreadyHasBass) {
+          return arr;
+        }
+
+        if (arr.find((o) => o.index === item.index) === undefined) {
           arr.push(item);
         }
 
         return arr;
       }, []);
-
-    // console.log("filteredSingleHits", activeShapes, filteredSingleHits);
 
     filteredSingleHits.forEach((hit) => {
       hit.sampler.triggerAttack("C#-1");
@@ -409,39 +438,3 @@ const Boxes = ({
 };
 
 export default Boxes;
-
-// const array = [
-//   [1, 2],
-//   [2, 3],
-//   [0, 9],
-//   [9, 3],
-//   [5, 4],
-// ];
-
-// let sum = [{ index: 2, cover: [0, 9] }];
-
-// const iterateCoverIndexes = () => {
-//   for (let i = 0; i < array.length; i++) {
-//     const match = array[i].filter(
-//       (a) => sum.find((b) => b.cover.indexOf(a) >= 0) !== undefined
-//     );
-
-//     // const match2 = array[i].find((o) => sum.indexOf((o) >= 0);
-
-//     console.log("HEJ INNE", i, match);
-
-//     const alreadyExists = sum.find((o) => o.index === i) !== undefined;
-
-//     if (match.length && !alreadyExists) {
-//       sum.push({ index: i, cover: array[i] });
-//       iterateCoverIndexes();
-//       break;
-//     }
-//   }
-// };
-
-// iterateCoverIndexes();
-
-// console.log("HEJ UTE 1", sum);
-
-// // [2, 3, 1, 0] correct

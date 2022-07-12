@@ -19,7 +19,7 @@ export interface Sample {
 
 export const BASS: Sample[] = [
   {
-    index: 0,
+    index: 100,
     sampler: new Sampler({
       urls: {
         1: `${path}-a2sB.mp3`,
@@ -28,7 +28,7 @@ export const BASS: Sample[] = [
     }),
   },
   {
-    index: 1,
+    index: 200,
     sampler: new Sampler({
       urls: {
         1: `${path}-c3B.mp3`,
@@ -37,7 +37,7 @@ export const BASS: Sample[] = [
     }),
   },
   {
-    index: 2,
+    index: 300,
     sampler: new Sampler({
       urls: {
         1: `${path}-d3sB.mp3`,
@@ -46,7 +46,7 @@ export const BASS: Sample[] = [
     }),
   },
   {
-    index: 3,
+    index: 400,
     sampler: new Sampler({
       urls: {
         1: `${path}-g2sB.mp3`,
@@ -55,7 +55,7 @@ export const BASS: Sample[] = [
     }),
   },
   {
-    index: 4,
+    index: 500,
     sampler: new Sampler({
       urls: {
         1: `${path}-g3B.mp3`,
@@ -64,7 +64,7 @@ export const BASS: Sample[] = [
     }),
   },
   {
-    index: 5,
+    index: 600,
     sampler: new Sampler({
       urls: {
         1: `${path}-f2B.mp3`,
@@ -73,7 +73,7 @@ export const BASS: Sample[] = [
     }),
   },
   {
-    index: 6,
+    index: 700,
     sampler: new Sampler({
       urls: {
         1: `${path}-g2B.mp3`,

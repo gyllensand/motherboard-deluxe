@@ -67,8 +67,7 @@ export interface Object {
 export const instrument = pickRandomHash(INSTRUMENTS);
 export const widthNumber = pickRandomHashNumberFromArray(WIDTH);
 export const width = WIDTH[widthNumber];
-// const boardRotation = pickRandomHash(ROTATION);
-const boardRotation = 0;
+const boardRotation = pickRandomHash(ROTATION);
 const primaryBgColor = pickRandomHash(BG_DARK);
 const secondaryBgColor = pickRandomHash(BG_DARK);
 const mainTheme = pickRandomHash(LIGHT_THEMES);
@@ -226,8 +225,6 @@ const objectMeta = shapes.reduce<ObjectMeta[]>((array, shape, index) => {
   return array;
 }, []);
 
-console.log("objectMeta", objectMeta);
-
 const filteredShapes = shapes.map((shape, i) => {
   const needsRemoval =
     objectMeta.filter((o) => o.toRemove?.find((r) => r === i) !== undefined)
@@ -296,7 +293,7 @@ const Scene = () => {
 
   const flashLightRef = useRef<PointLight>();
   const [isPointerDown, setIsPointerDown] = useState(false);
-  const [isPointerIdle, setIsPointerIdle] = useState(true);
+  const [isPointerOnBg, setIsPointerOnBg] = useState(false);
   const toneInitialized = useRef(false);
   const [hits, setHits] = useState<Sample[][]>();
   const [lightSpring, setLightSpring] = useSpring(() => ({
@@ -371,24 +368,20 @@ const Scene = () => {
         x: (event.clientX / window.innerWidth) * 2 - 1,
         y: -(event.clientY / window.innerHeight) * 2 + 1,
       };
-      // console.log(aspect);
 
-      // put aspect as 1, perhaps it will keep square aspect
-      const cameraPosition = new Vector3(
-        aspect > 1 ? camera.position.x : camera.position.x / aspect,
-        aspect > 1 ? camera.position.y : camera.position.y * aspect,
-        // aspect > 1 ? camera.position.z : camera.position.z * aspect,
-        camera.position.z
-      );
-
-      const vector = new Vector3(mouse.x, mouse.y, -1);
+      const vector = new Vector3(mouse.x, mouse.y, 0);
       vector.unproject(camera);
-      const dir = vector.sub(cameraPosition).normalize();
-      const distance = -cameraPosition.z / dir.z;
-      const pos = cameraPosition.clone().add(dir.multiplyScalar(distance));
+
+      const dir = vector.sub(camera.position).normalize();
+      const distance = -camera.position.z / dir.z;
+      const pos = camera.position.clone().add(dir.multiplyScalar(distance));
 
       flashLightRef.current?.position.copy(
-        new Vector3(pos.x, pos.y, pos.z - 1)
+        new Vector3(
+          aspect > 1 ? pos.x : pos.x / aspect,
+          aspect > 1 ? pos.y : pos.y / aspect,
+          pos.z - 1
+        )
       );
     },
     [camera, aspect]
@@ -415,7 +408,6 @@ const Scene = () => {
   }, []);
 
   useEffect(() => {
-    console.log("123123123");
     document.addEventListener("pointermove", onPointerMove, false);
     document.addEventListener("pointerdown", onPointerDown, false);
     document.addEventListener("pointerup", onPointerUp, false);
@@ -427,17 +419,12 @@ const Scene = () => {
     return (
       // @ts-ignore
       <mesh
-        onPointerEnter={() => setIsPointerIdle(true)}
-        onPointerLeave={() => setIsPointerIdle(false)}
+        onPointerEnter={() => setIsPointerOnBg(true)}
+        onPointerLeave={() => setIsPointerOnBg(false)}
         position={[0, 0, getSizeByAspect(0.1, aspect)]}
         rotation={[Math.PI, 0, Math.PI / 4]}
       >
-        <planeBufferGeometry
-          args={[
-            getSizeByAspect(dimension * 2, aspect),
-            getSizeByAspect(dimension * 2, aspect),
-          ]}
-        />
+        <planeBufferGeometry args={[dimension * 2, dimension * 2, 1, 1]} />
         <meshBasicMaterial>
           <GradientTexture
             stops={[0, 1]}
@@ -473,7 +460,7 @@ const Scene = () => {
             aspect={aspect}
             hits={hits}
             isPointerDown={isPointerDown}
-            isPointerIdle={isPointerIdle}
+            isPointerOnBg={isPointerOnBg}
           />
           <Squares objects={objects} aspect={aspect} />
           <SquaresExtra objects={objects} aspect={aspect} />

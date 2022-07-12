@@ -44,7 +44,7 @@ const Lights = ({
        */}
       <a.pointLight
         ref={flashLightRef}
-        position={[0, 0, -10]}
+        position={[0, 0, -1]}
         color={flashLightColor}
         intensity={lightSpring.flashLight}
         decay={2}
