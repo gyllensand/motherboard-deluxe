@@ -8,6 +8,8 @@ import { useGesture } from "react-use-gesture";
 import { getSizeByAspect, minMaxNumber } from "./utils";
 import { Sample } from "./App";
 
+const DOUBLE_SIZE = 2.43;
+
 interface ActiveShape {
   index: number;
   shape: number;
@@ -48,19 +50,7 @@ function updateInstancedMeshMatrices({
         continue;
       }
 
-      if (
-        objects[matchingId.index].shape === SHAPE_TYPES.FILLED_TILTED_SQUARE
-      ) {
-        tempObject.position.set(
-          getSizeByAspect(x, aspect),
-          getSizeByAspect(y, aspect),
-          0
-        );
-        tempObject.scale.set(0.5 * scale, 0.5 * scale, 0.5);
-        tempObject.rotation.set(0, 0, Math.PI / 4);
-      } else if (
-        objects[matchingId.index].shape === SHAPE_TYPES.FILLED_SQUARE_LARGE
-      ) {
+      if (objects[matchingId.index].shape === SHAPE_TYPES.FILLED_SQUARE_LARGE) {
         tempObject.position.set(
           getSizeByAspect(x + 0.5, aspect),
           getSizeByAspect(y - 0.5, aspect),
@@ -69,10 +59,10 @@ function updateInstancedMeshMatrices({
 
         const activeScale =
           activeShapes.length > 1
-            ? 2.43 * minMaxNumber(scale / 1.07, 1, 2)
-            : 2.43 * scale;
+            ? DOUBLE_SIZE * minMaxNumber(scale / 1.08, 1, 2)
+            : DOUBLE_SIZE * scale;
 
-        tempObject.scale.set(activeScale, activeScale, 1.03);
+        tempObject.scale.set(activeScale, activeScale, 1.01);
         tempObject.rotation.set(0, 0, 0);
       } else if (
         objects[matchingId.index].shape === SHAPE_TYPES.HOR_RECTANGLE
@@ -85,10 +75,10 @@ function updateInstancedMeshMatrices({
 
         const activeScale =
           activeShapes.length > 1
-            ? 2.43 * minMaxNumber(scale / 1.1, 1, 2)
-            : 2.43 * scale;
+            ? DOUBLE_SIZE * minMaxNumber(scale / 1.1, 1, 2)
+            : DOUBLE_SIZE * scale;
 
-        tempObject.scale.set(activeScale, 1.01 * scale, 1.02);
+        tempObject.scale.set(activeScale, 1 * scale, 1);
         tempObject.rotation.set(0, 0, 0);
       } else if (
         objects[matchingId.index].shape === SHAPE_TYPES.VER_RECTANGLE
@@ -101,10 +91,10 @@ function updateInstancedMeshMatrices({
 
         const activeScale =
           activeShapes.length > 1
-            ? 2.43 * minMaxNumber(scale / 1.1, 1, 2)
-            : 2.43 * scale;
+            ? DOUBLE_SIZE * minMaxNumber(scale / 1.1, 1, 2)
+            : DOUBLE_SIZE * scale;
 
-        tempObject.scale.set(1.01 * scale, activeScale, 1.01);
+        tempObject.scale.set(1 * scale, activeScale, 1);
         tempObject.rotation.set(0, 0, 0);
       } else {
         tempObject.position.set(
@@ -125,7 +115,7 @@ function updateInstancedMeshMatrices({
   }
 }
 
-const getIntersectingIndexesFromId = (
+export const getIntersectingIndexesFromId = (
   id: number,
   objects: Object[]
 ): ActiveShape[] => {
@@ -170,12 +160,14 @@ const Boxes = ({
   isPointerDown,
   isPointerOnBg,
   hits,
+  toneInitialized,
 }: {
   objects: Object[];
   aspect: number;
   isPointerDown: boolean;
   isPointerOnBg: boolean;
   hits?: Sample[][];
+  toneInitialized: boolean;
 }) => {
   const tempColor = useMemo(() => new Color(), []);
   const tempObject = useMemo(() => new Object3D(), []);
@@ -195,7 +187,6 @@ const Boxes = ({
     scale: 1,
     config: {
       mass: 5,
-      // mass: objects[i].shape === SHAPE_TYPES.FILLED_SQUARE_LARGE ? 100 : 5,
       tension: 1000,
       friction: 50,
       precision: 0.0001,
@@ -203,13 +194,19 @@ const Boxes = ({
     },
   }));
 
-  const prevPointerOut = useRef<ActiveShape[]>();
+  const prevPointerOut = useRef<ActiveShape[] | undefined>([]);
 
   useEffect(() => {
     if (isPointerOnBg) {
       prevPointerOut.current = undefined;
     }
   }, [isPointerOnBg]);
+
+  useEffect(() => {
+    if (!isPointerDown) {
+      setActiveShapes(undefined);
+    }
+  }, [isPointerDown]);
 
   const bind = useGesture({
     onPointerOver: (e) => {
@@ -233,17 +230,7 @@ const Boxes = ({
       setActiveShapes(undefined);
     },
     onPointerDown: (e) => {
-      if (activeShapes) {
-        return;
-      }
-
-      // @ts-ignore
-      const id = e.event.instanceId;
-      const intersectedIds = getIntersectingIndexesFromId(id, objects);
-      setActiveShapes([...intersectedIds]);
-    },
-    onPointerUp: (e) => {
-      if (activeShapes) {
+      if (!toneInitialized) {
         return;
       }
 
@@ -322,7 +309,7 @@ const Boxes = ({
             getSizeByAspect(y - 0.5, aspect),
             0
           );
-          tempObject.scale.set(2.43, 2.43, 1.03);
+          tempObject.scale.set(DOUBLE_SIZE, DOUBLE_SIZE, 1.01);
           tempObject.rotation.set(0, 0, 0);
         } else if (objects[i].shape === SHAPE_TYPES.HOR_RECTANGLE) {
           tempObject.position.set(
@@ -330,7 +317,7 @@ const Boxes = ({
             getSizeByAspect(y, aspect),
             0
           );
-          tempObject.scale.set(2.43, 1.01, 1.02);
+          tempObject.scale.set(DOUBLE_SIZE, 1, 1);
           tempObject.rotation.set(0, 0, 0);
         } else if (objects[i].shape === SHAPE_TYPES.VER_RECTANGLE) {
           tempObject.position.set(
@@ -338,7 +325,7 @@ const Boxes = ({
             getSizeByAspect(y - 0.5, aspect),
             0
           );
-          tempObject.scale.set(1.01, 2.43, 1.01);
+          tempObject.scale.set(1, DOUBLE_SIZE, 1);
           tempObject.rotation.set(0, 0, 0);
         } else {
           tempObject.position.set(

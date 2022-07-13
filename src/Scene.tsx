@@ -1,32 +1,24 @@
 import { GradientTexture, OrbitControls } from "@react-three/drei";
 import { useThree } from "@react-three/fiber";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { PointLight, Vector3 } from "three";
 import {
-  AMBIENT_LIGHT_INTENSITY,
   BG_COLORS,
   COLORS,
-  POINT_LIGHT_INTENSITY,
   SHAPES,
-  SPOT_LIGHT_INTENSITY,
   LIGHT_THEMES,
   EFFECTS,
   SCALES,
   INSTRUMENTS,
   WIDTH,
   SIZE,
-  BG_DARK,
   SHAPE_TYPES,
   ROTATION,
   FLASH_LIGHT_COLORS,
 } from "./constants";
 import {
   pickRandomHash,
-  getRandomNumber,
   pickRandomColorWithTheme,
-  sortRandom,
-  easeInOutSine,
-  pickRandom,
   getSizeByAspect,
   pickRandomHashNumberFromArray,
 } from "./utils";
@@ -35,11 +27,12 @@ import {
   Sepia,
   Vignette,
   ChromaticAberration,
+  HueSaturation,
 } from "@react-three/postprocessing";
 import { BlendFunction } from "postprocessing";
 import { BASS, HITS, Sample } from "./App";
-import { Destination, Filter, start } from "tone";
-import Boxes from "./Boxes";
+import { start } from "tone";
+import Boxes, { getIntersectingIndexesFromId } from "./Boxes";
 import {
   Rings,
   RingsExtra,
@@ -64,12 +57,15 @@ export interface Object {
   secondColor: string;
 }
 
+const primaryPalette = pickRandomHash(BG_COLORS);
+const secondaryPalette = pickRandomHash(BG_COLORS);
+
 export const instrument = pickRandomHash(INSTRUMENTS);
 export const widthNumber = pickRandomHashNumberFromArray(WIDTH);
 export const width = WIDTH[widthNumber];
 const boardRotation = pickRandomHash(ROTATION);
-const primaryBgColor = pickRandomHash(BG_DARK);
-const secondaryBgColor = pickRandomHash(BG_DARK);
+const primaryBgColor = pickRandomHash(primaryPalette);
+const secondaryBgColor = pickRandomHash(secondaryPalette);
 const mainTheme = pickRandomHash(LIGHT_THEMES);
 const flashLightColor = pickRandomHash(FLASH_LIGHT_COLORS);
 const themeColor = pickRandomHash(COLORS);
@@ -77,9 +73,6 @@ const themeColor2 = pickRandomHash(COLORS);
 const themeColor3 = pickRandomHash(COLORS);
 const themeColor4 = pickRandomHash(COLORS);
 const effectFilter = pickRandomHash(EFFECTS);
-const pointIntensity = pickRandomHash(POINT_LIGHT_INTENSITY);
-const spotIntensity = pickRandomHash(SPOT_LIGHT_INTENSITY);
-const ambientIntensity = pickRandomHash(AMBIENT_LIGHT_INTENSITY);
 
 export const shapes = new Array(width * width)
   .fill(null)
@@ -237,10 +230,7 @@ const filteredShapes = shapes.map((shape, i) => {
   return shape;
 });
 
-// console.log("shapes", shapes);
-// console.log("filteredShapes", filteredShapes);
-// console.log("light", mainTheme);
-const objects = filteredShapes.map((shape, i) => {
+const preObjects = filteredShapes.map((shape, i) => {
   const color1 = pickRandomColorWithTheme(themeColor, shapes.length);
   const color2 = pickRandomColorWithTheme(themeColor2, shapes.length);
   const color3 = pickRandomColorWithTheme(themeColor3, shapes.length);
@@ -255,7 +245,12 @@ const objects = filteredShapes.map((shape, i) => {
       : color4;
 
   const secondColor = pickRandomHash(COLORS);
-  const composition = shape + currentColor.charCodeAt(6);
+  const composition =
+    shape +
+    currentColor.charCodeAt(6) +
+    secondColor.charCodeAt(6) +
+    i +
+    (objectMeta[i].coveringIndexes?.length || 0);
 
   return {
     index: i,
@@ -265,6 +260,18 @@ const objects = filteredShapes.map((shape, i) => {
     shape,
     coveringIndexes: objectMeta[i].coveringIndexes || [],
   };
+});
+
+let objects = [...preObjects];
+
+objects.forEach((o) => {
+  const intersects = getIntersectingIndexesFromId(o.index, objects);
+
+  if (intersects.length) {
+    intersects.forEach(({ index }) => {
+      objects[index].color = o.color;
+    });
+  }
 });
 
 // @ts-ignore
@@ -303,15 +310,9 @@ const Scene = () => {
   }));
 
   useEffect(() => {
-    const filter = new Filter(4000, "lowpass");
-
     BASS.forEach((bass) => bass.sampler.toDestination());
     HITS.forEach((hit) => {
-      if (instrument === 0) {
-        hit.sampler.chain(filter, Destination);
-      } else {
-        hit.sampler.toDestination();
-      }
+      hit.sampler.toDestination();
     });
 
     const setupTones = (sequence: number[], amount: number) => {
@@ -345,8 +346,12 @@ const Scene = () => {
         case SHAPE_TYPES.FILLED_SQUARE_LARGE:
           const scale2 = pickRandomHash(SCALES);
           const samples2 = setupTones(scale2.sequence, 3);
+          const bass =
+            BASS.find((o) => o.index === scale2.bass) !== undefined
+              ? [BASS.find((o) => o.index === scale2.bass)!]
+              : [];
 
-          return [...samples2, BASS[scale2.index]];
+          return [...samples2, ...bass];
         default:
           return [pickRandomHash(HITS)];
       }
@@ -360,10 +365,8 @@ const Scene = () => {
     toneInitialized.current = true;
   }, []);
 
-  const onPointerMove = useCallback(
+  const handleFlashLight = useCallback(
     (event: PointerEvent) => {
-      event.preventDefault();
-
       const mouse = {
         x: (event.clientX / window.innerWidth) * 2 - 1,
         y: -(event.clientY / window.innerHeight) * 2 + 1,
@@ -387,6 +390,14 @@ const Scene = () => {
     [camera, aspect]
   );
 
+  const onPointerMove = useCallback(
+    (event: PointerEvent) => {
+      event.preventDefault();
+      handleFlashLight(event);
+    },
+    [handleFlashLight]
+  );
+
   useEffect(() => {
     setLightSpring.start({
       flashLight: isPointerDown ? 10 : 0,
@@ -395,13 +406,17 @@ const Scene = () => {
     });
   }, [setLightSpring, isPointerDown]);
 
-  const onPointerDown = useCallback(() => {
-    if (!toneInitialized.current) {
-      initializeTone();
-    }
+  const onPointerDown = useCallback(
+    (event: PointerEvent) => {
+      if (!toneInitialized.current) {
+        initializeTone();
+      }
 
-    setIsPointerDown(true);
-  }, [initializeTone]);
+      handleFlashLight(event);
+      setIsPointerDown(true);
+    },
+    [initializeTone, handleFlashLight]
+  );
 
   const onPointerUp = useCallback(() => {
     setIsPointerDown(false);
@@ -412,6 +427,23 @@ const Scene = () => {
     document.addEventListener("pointerdown", onPointerDown, false);
     document.addEventListener("pointerup", onPointerUp, false);
   }, [onPointerMove, onPointerDown, onPointerUp]);
+
+  const renderEffects = useCallback(() => {
+    switch (effectFilter) {
+      case 1:
+        return (
+          <EffectComposer>
+            <HueSaturation
+              blendFunction={BlendFunction.NORMAL}
+              hue={0}
+              saturation={100}
+            />
+          </EffectComposer>
+        );
+      default:
+        return null;
+    }
+  }, []);
 
   const renderBackground = useCallback(() => {
     const dimension = aspect > 1 ? viewport.width : viewport.height;
@@ -461,6 +493,7 @@ const Scene = () => {
             hits={hits}
             isPointerDown={isPointerDown}
             isPointerOnBg={isPointerOnBg}
+            toneInitialized={toneInitialized.current}
           />
           <Squares objects={objects} aspect={aspect} />
           <SquaresExtra objects={objects} aspect={aspect} />
@@ -469,6 +502,7 @@ const Scene = () => {
           <RingsExtra2 objects={objects} aspect={aspect} />
         </group>
       </group>
+      {renderEffects()}
     </>
   );
 };
