@@ -9,8 +9,12 @@ console.log(
   "color: #d80fe7; font-size: 16px; background-color: #000000;"
 );
 
-// const path = instrument === 0 ? "piano" : "synth";
-const path = "synth";
+console.log(
+  "%c http://www.computeremotions.com ",
+  "font-size: 12px; background-color: #000000;"
+);
+
+const path = instrument === 0 ? "synth" : "harp";
 const baseUrl = `${process.env.PUBLIC_URL}/audio/${path}/`;
 
 export interface Sample {

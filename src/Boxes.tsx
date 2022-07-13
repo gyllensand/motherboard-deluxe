@@ -230,10 +230,6 @@ const Boxes = ({
       setActiveShapes(undefined);
     },
     onPointerDown: (e) => {
-      if (!toneInitialized) {
-        return;
-      }
-
       // @ts-ignore
       const id = e.event.instanceId;
       const intersectedIds = getIntersectingIndexesFromId(id, objects);
@@ -382,9 +378,11 @@ const Boxes = ({
         return arr;
       }, []);
 
-    filteredSingleHits.forEach((hit) => {
-      hit.sampler.triggerAttack("C#-1");
-    });
+      if(toneInitialized) {
+        filteredSingleHits.forEach((hit) => {
+          hit.sampler.triggerAttack("C#-1");
+        });
+      }
 
     meshRef.current!.instanceMatrix.needsUpdate = true;
   }, [
@@ -397,6 +395,7 @@ const Boxes = ({
     hits,
     isPointerDown,
     springs,
+    toneInitialized,
   ]);
 
   return (

@@ -22,14 +22,7 @@ import {
   getSizeByAspect,
   pickRandomHashNumberFromArray,
 } from "./utils";
-import {
-  EffectComposer,
-  Sepia,
-  Vignette,
-  ChromaticAberration,
-  HueSaturation,
-} from "@react-three/postprocessing";
-import { BlendFunction } from "postprocessing";
+import { EffectComposer, Sepia } from "@react-three/postprocessing";
 import { BASS, HITS, Sample } from "./App";
 import { start } from "tone";
 import Boxes, { getIntersectingIndexesFromId } from "./Boxes";
@@ -307,6 +300,9 @@ const Scene = () => {
     flashLight: 0,
     roomLight: 1,
     ambientLight: 0.5,
+    config: {
+      duration: 400,
+    },
   }));
 
   useEffect(() => {
@@ -433,11 +429,7 @@ const Scene = () => {
       case 1:
         return (
           <EffectComposer>
-            <HueSaturation
-              blendFunction={BlendFunction.NORMAL}
-              hue={0}
-              saturation={100}
-            />
+            <Sepia />
           </EffectComposer>
         );
       default:
