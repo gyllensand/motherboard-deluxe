@@ -67,10 +67,14 @@ export const getUniqueColors = (array: Theme[]) => {
   });
 };
 
-export const pickRandomColorWithTheme = (color: string, count: number) => {
+export const pickRandomColorWithTheme = (
+  color: string,
+  theme: string[],
+  count: number
+) => {
   const primaryColor = new Array(count * 2).fill(null).map(() => color);
 
-  return pickRandomHash([...primaryColor, ...COLORS]);
+  return pickRandomHash([...primaryColor, ...theme]);
 };
 
 export const easeInOutSine = (t: number, b: number, _c: number, d: number) => {

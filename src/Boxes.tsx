@@ -41,11 +41,7 @@ function updateInstancedMeshMatrices({
       let innerId = i;
       const matchingId = activeShapes?.find(({ index }) => index === innerId);
 
-      if (
-        !activeShapes ||
-        matchingId === undefined ||
-        objects[i].shape === SHAPE_TYPES.FILLED_TILTED_SQUARE
-      ) {
+      if (!activeShapes || matchingId === undefined) {
         i++;
         continue;
       }
@@ -283,7 +279,6 @@ const Boxes = ({
         if (
           objects[i].shape !== SHAPE_TYPES.FILLED_SQUARE &&
           objects[i].shape !== SHAPE_TYPES.FILLED_SQUARE_LARGE &&
-          objects[i].shape !== SHAPE_TYPES.FILLED_TILTED_SQUARE &&
           objects[i].shape !== SHAPE_TYPES.HOR_RECTANGLE &&
           objects[i].shape !== SHAPE_TYPES.VER_RECTANGLE
         ) {
@@ -291,15 +286,7 @@ const Boxes = ({
           continue;
         }
 
-        if (objects[i].shape === SHAPE_TYPES.FILLED_TILTED_SQUARE) {
-          tempObject.position.set(
-            getSizeByAspect(x, aspect),
-            getSizeByAspect(y, aspect),
-            0
-          );
-          tempObject.scale.set(0.5, 0.5, 0.5);
-          tempObject.rotation.set(0, 0, Math.PI / 4);
-        } else if (objects[i].shape === SHAPE_TYPES.FILLED_SQUARE_LARGE) {
+        if (objects[i].shape === SHAPE_TYPES.FILLED_SQUARE_LARGE) {
           tempObject.position.set(
             getSizeByAspect(x + 0.5, aspect),
             getSizeByAspect(y - 0.5, aspect),
@@ -336,9 +323,6 @@ const Boxes = ({
         const id = i;
 
         if (
-          !!activeShapes?.find(
-            (active) => active.shape !== SHAPE_TYPES.FILLED_TILTED_SQUARE
-          ) &&
           !!activeShapes?.find((active) => id === active.index) &&
           hits &&
           isPointerDown
@@ -378,11 +362,11 @@ const Boxes = ({
         return arr;
       }, []);
 
-      if(toneInitialized) {
-        filteredSingleHits.forEach((hit) => {
-          hit.sampler.triggerAttack("C#-1");
-        });
-      }
+    if (toneInitialized) {
+      filteredSingleHits.forEach((hit) => {
+        hit.sampler.triggerAttack("C#-1");
+      });
+    }
 
     meshRef.current!.instanceMatrix.needsUpdate = true;
   }, [

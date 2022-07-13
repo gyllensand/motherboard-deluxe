@@ -3,10 +3,6 @@ export interface Theme {
   colors: string[];
 }
 
-export const DEFAULT_BPM = 110;
-
-export const RING_SEGMENTS = 80;
-
 export const EFFECTS = [...new Array(60).fill(null).map(() => 0), 1];
 
 export const INSTRUMENTS = [0, 1];
@@ -88,7 +84,7 @@ export const SCALES = [
   {
     index: 8,
     bass: 800,
-    sequence: [17, 15, 7, 1, 13], // bass same as 13
+    sequence: [17, 15, 7, 1, 13],
   },
   {
     index: 9,
@@ -127,24 +123,14 @@ export const SCALES = [
   },
 ];
 
-// export const BG_COLORS = [
-//   "#A2CCB6",
-//   "#FCEEB5",
-//   "#EE786E",
-//   "#e0feff",
-//   "lightpink",
-//   "lightblue",
-// ];
-
 export const BG_DARK = ["#000000", "#0b0b4b", "#1b3342", "#1b4225", "#632331"];
 export const BG_LIGHT = ["#ffce00", "#30f8a0", "#f97b9c", "#fe7418", "#75007e"];
 
 export const BG_COLORS = [BG_DARK, BG_DARK, BG_LIGHT];
 
-export const COLORS = [
+export const COLORS_LIGHT = [
   "#ffffff",
   "#e0feff",
-  // "#cccccc",
   "#FCEEB5",
   "#ffce00",
   "#eb3434",
@@ -162,11 +148,30 @@ export const COLORS = [
   "#75007e",
   "#aa4807",
   "#800b0b",
-  // "#1b4225",
-  // "#1b3342",
-  // "#0b0b4b",
-  // "#000000",
 ];
+
+export const COLORS_DARK = [
+  "#FCEEB5",
+  "#eb3434",
+  "#A2CCB6",
+  "lightpink",
+  "#f97b9c",
+  "#EE786E",
+  "#fe7418",
+  "lightblue",
+  "#00f7fb",
+  "#497fff",
+  "#344df2",
+  "#dc0fc0",
+  "#75007e",
+  "#aa4807",
+  "#800b0b",
+  "#1b4225",
+  "#1b3342",
+  "#0b0b4b",
+];
+
+export const COLORS = [COLORS_LIGHT, COLORS_DARK];
 
 export const LIGHT_THEMES = [
   ...new Array(60).fill(null).map(() => "#ffffff"),

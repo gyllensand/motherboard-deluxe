@@ -32,6 +32,7 @@ import {
   RingsExtra2,
   Squares,
   SquaresExtra,
+  TiltexBoxes,
 } from "./Shapes";
 import { useSpring } from "react-spring";
 import Lights from "./Lights";
@@ -50,8 +51,14 @@ export interface Object {
   secondColor: string;
 }
 
-const primaryPalette = pickRandomHash(BG_COLORS);
-const secondaryPalette = pickRandomHash(BG_COLORS);
+const primaryPaletteNumber = pickRandomHashNumberFromArray(BG_COLORS);
+const primaryPalette = BG_COLORS[primaryPaletteNumber];
+const secondaryPaletteNumber = pickRandomHashNumberFromArray(BG_COLORS);
+const secondaryPalette = BG_COLORS[secondaryPaletteNumber];
+const colorTheme =
+  primaryPaletteNumber === 2 && secondaryPaletteNumber === 2
+    ? COLORS[1]
+    : COLORS[0];
 
 export const instrument = pickRandomHash(INSTRUMENTS);
 export const widthNumber = pickRandomHashNumberFromArray(WIDTH);
@@ -61,10 +68,10 @@ const primaryBgColor = pickRandomHash(primaryPalette);
 const secondaryBgColor = pickRandomHash(secondaryPalette);
 const mainTheme = pickRandomHash(LIGHT_THEMES);
 const flashLightColor = pickRandomHash(FLASH_LIGHT_COLORS);
-const themeColor = pickRandomHash(COLORS);
-const themeColor2 = pickRandomHash(COLORS);
-const themeColor3 = pickRandomHash(COLORS);
-const themeColor4 = pickRandomHash(COLORS);
+const themeColor = pickRandomHash(colorTheme);
+const themeColor2 = pickRandomHash(colorTheme);
+const themeColor3 = pickRandomHash(colorTheme);
+const themeColor4 = pickRandomHash(colorTheme);
 const effectFilter = pickRandomHash(EFFECTS);
 
 export const shapes = new Array(width * width)
@@ -224,10 +231,26 @@ const filteredShapes = shapes.map((shape, i) => {
 });
 
 const preObjects = filteredShapes.map((shape, i) => {
-  const color1 = pickRandomColorWithTheme(themeColor, shapes.length);
-  const color2 = pickRandomColorWithTheme(themeColor2, shapes.length);
-  const color3 = pickRandomColorWithTheme(themeColor3, shapes.length);
-  const color4 = pickRandomColorWithTheme(themeColor4, shapes.length);
+  const color1 = pickRandomColorWithTheme(
+    themeColor,
+    colorTheme,
+    shapes.length
+  );
+  const color2 = pickRandomColorWithTheme(
+    themeColor2,
+    colorTheme,
+    shapes.length
+  );
+  const color3 = pickRandomColorWithTheme(
+    themeColor3,
+    colorTheme,
+    shapes.length
+  );
+  const color4 = pickRandomColorWithTheme(
+    themeColor4,
+    colorTheme,
+    shapes.length
+  );
   const currentColor =
     i < shapes.length / 4
       ? color1
@@ -237,7 +260,7 @@ const preObjects = filteredShapes.map((shape, i) => {
       ? color3
       : color4;
 
-  const secondColor = pickRandomHash(COLORS);
+  const secondColor = pickRandomHash(colorTheme);
   const composition =
     shape +
     currentColor.charCodeAt(6) +
@@ -487,6 +510,7 @@ const Scene = () => {
             isPointerOnBg={isPointerOnBg}
             toneInitialized={toneInitialized.current}
           />
+          <TiltexBoxes objects={objects} aspect={aspect} />
           <Squares objects={objects} aspect={aspect} />
           <SquaresExtra objects={objects} aspect={aspect} />
           <Rings objects={objects} aspect={aspect} />

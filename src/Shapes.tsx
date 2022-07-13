@@ -11,6 +11,89 @@ import {
   pickRandomDecimalFromInterval,
 } from "./utils";
 
+export function TiltexBoxes({
+  objects,
+  aspect,
+}: {
+  objects: Object[];
+  aspect: number;
+}) {
+  const tempColor = useMemo(() => new Color(), []);
+  const tempObject = useMemo(() => new Object3D(), []);
+  const meshRef = useRef<InstancedMesh>();
+  const colorArray = useMemo(
+    () =>
+      Float32Array.from(
+        new Array(objects.length)
+          .fill(null)
+          .flatMap((o, i) => tempColor.set(objects[i].color).toArray())
+      ),
+    [tempColor, objects]
+  );
+
+  const timings = useMemo<number[]>(() => [], []);
+  for (let x = 0; x < width; x++) {
+    for (let y = 0; y < width; y++) {
+      timings.push(pickRandomDecimalFromInterval(1, 2, 2));
+    }
+  }
+
+  useFrame((state) => {
+    const time = state.clock.getElapsedTime();
+
+    let i = 0;
+    for (let x = 0; x < width; x++) {
+      for (let y = 0; y < width; y++) {
+        if (objects[i].shape !== SHAPE_TYPES.FILLED_TILTED_SQUARE) {
+          i++;
+          continue;
+        }
+
+        const id = i++;
+
+        const scale = easeInOutSine(
+          minMaxNumber(Math.sin(time / timings[i]), 0.2, 0.5),
+          0.2,
+          0.5,
+          0.5
+        );
+
+        tempObject.position.set(
+          getSizeByAspect(x, aspect),
+          getSizeByAspect(y, aspect),
+          0
+        );
+        tempObject.scale.set(scale, scale, 0.5);
+        tempObject.rotation.set(0, 0, Math.PI / 4);
+        tempObject.updateMatrix();
+        meshRef.current!.setMatrixAt(id, tempObject.matrix);
+      }
+    }
+    meshRef.current!.instanceMatrix.needsUpdate = true;
+  });
+
+  return (
+    <a.instancedMesh
+      ref={meshRef}
+      args={[undefined, undefined, objects.length]}
+    >
+      <boxBufferGeometry
+        attach="geometry"
+        args={[
+          getSizeByAspect(0.7, aspect),
+          getSizeByAspect(0.7, aspect),
+          getSizeByAspect(0.2, aspect),
+        ]}
+      >
+        <instancedBufferAttribute
+          attachObject={["attributes", "color"]}
+          args={[colorArray, 3]}
+        />
+      </boxBufferGeometry>
+      <meshStandardMaterial vertexColors />
+    </a.instancedMesh>
+  );
+}
 export function Rings({
   objects,
   aspect,
