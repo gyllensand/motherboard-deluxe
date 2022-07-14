@@ -292,7 +292,7 @@ const Boxes = ({
             getSizeByAspect(y - 0.5, aspect),
             0
           );
-          tempObject.scale.set(DOUBLE_SIZE, DOUBLE_SIZE, 1.01);
+          tempObject.scale.set(DOUBLE_SIZE + 0.01, DOUBLE_SIZE + 0.01, 1);
           tempObject.rotation.set(0, 0, 0);
         } else if (objects[i].shape === SHAPE_TYPES.HOR_RECTANGLE) {
           tempObject.position.set(

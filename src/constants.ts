@@ -124,7 +124,7 @@ export const SCALES = [
 ];
 
 export const BG_DARK = ["#000000", "#0b0b4b", "#1b3342", "#1b4225", "#632331"];
-export const BG_LIGHT = ["#ffce00", "#30f8a0", "#f97b9c", "#fe7418", "#75007e"];
+export const BG_LIGHT = ["#497fff", "#30f8a0", "#f97b9c", "#fe7418", "#75007e"];
 
 export const BG_COLORS = [BG_DARK, BG_DARK, BG_LIGHT];
 
@@ -152,6 +152,7 @@ export const COLORS_LIGHT = [
 
 export const COLORS_DARK = [
   "#FCEEB5",
+  "#ffce00",
   "#eb3434",
   "#A2CCB6",
   "lightpink",

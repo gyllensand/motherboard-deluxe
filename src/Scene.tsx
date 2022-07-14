@@ -55,17 +55,19 @@ const primaryPaletteNumber = pickRandomHashNumberFromArray(BG_COLORS);
 const primaryPalette = BG_COLORS[primaryPaletteNumber];
 const secondaryPaletteNumber = pickRandomHashNumberFromArray(BG_COLORS);
 const secondaryPalette = BG_COLORS[secondaryPaletteNumber];
-const colorTheme =
-  primaryPaletteNumber === 2 && secondaryPaletteNumber === 2
-    ? COLORS[1]
-    : COLORS[0];
+
+const doubleLightTheme =
+  primaryPaletteNumber === 2 && secondaryPaletteNumber === 2;
+const colorTheme = doubleLightTheme ? COLORS[1] : COLORS[0];
 
 export const instrument = pickRandomHash(INSTRUMENTS);
 export const widthNumber = pickRandomHashNumberFromArray(WIDTH);
 export const width = WIDTH[widthNumber];
 const boardRotation = pickRandomHash(ROTATION);
 const primaryBgColor = pickRandomHash(primaryPalette);
-const secondaryBgColor = pickRandomHash(secondaryPalette);
+const secondaryBgColor = doubleLightTheme
+  ? pickRandomHash(secondaryPalette.filter((o) => o !== primaryBgColor))
+  : pickRandomHash(secondaryPalette);
 const mainTheme = pickRandomHash(LIGHT_THEMES);
 const flashLightColor = pickRandomHash(FLASH_LIGHT_COLORS);
 const themeColor = pickRandomHash(colorTheme);
@@ -322,7 +324,7 @@ const Scene = () => {
   const [lightSpring, setLightSpring] = useSpring(() => ({
     flashLight: 0,
     roomLight: 1,
-    ambientLight: 0.5,
+    ambientLight: doubleLightTheme ? 0.3 : 0.5,
     config: {
       duration: 400,
     },
@@ -421,7 +423,13 @@ const Scene = () => {
     setLightSpring.start({
       flashLight: isPointerDown ? 10 : 0,
       roomLight: isPointerDown ? 0 : 1,
-      ambientLight: isPointerDown ? 0.3 : 0.5,
+      ambientLight: doubleLightTheme
+        ? isPointerDown
+          ? 0.1
+          : 0.3
+        : isPointerDown
+        ? 0.3
+        : 0.5,
     });
   }, [setLightSpring, isPointerDown]);
 
