@@ -346,6 +346,16 @@ const Boxes = ({
       }
     }
 
+    meshRef.current!.instanceMatrix.needsUpdate = true;
+
+    const samplesLoaded = combinedHits
+      .flat()
+      .every((hit) => hit.sampler.loaded);
+
+    if (!samplesLoaded) {
+      return;
+    }
+
     const filteredSingleHits = combinedHits
       .flat()
       .reduce<Sample[]>((arr, item) => {
@@ -362,13 +372,9 @@ const Boxes = ({
         return arr;
       }, []);
 
-    if (toneInitialized) {
-      filteredSingleHits.forEach((hit) => {
-        hit.sampler.triggerAttack("C#-1");
-      });
-    }
-
-    meshRef.current!.instanceMatrix.needsUpdate = true;
+    filteredSingleHits.forEach((hit) => {
+      hit.sampler.triggerAttack("C#-1");
+    });
   }, [
     tempObject,
     objects,

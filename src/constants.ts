@@ -170,13 +170,11 @@ export const COLORS_DARK = [
 export const COLORS = [COLORS_LIGHT, COLORS_DARK];
 
 export const LIGHT_THEMES = [
-  ...new Array(60).fill(null).map(() => "#ffffff"),
-  "#A2CCB6",
-  "#FCEEB5",
+  ...new Array(40).fill(null).map(() => "#ffffff"),
   "#EE786E",
-  "#e0feff",
-  "lightpink",
-  "lightblue",
+  "#344df2",
+  "#eb3434",
+  "#dc0fc0",
 ];
 
 export const FLASH_LIGHT_COLORS = [
