@@ -1,5 +1,4 @@
 import { MathUtils } from "three";
-import { COLORS, Theme } from "./constants";
 
 declare const fxrand: () => number;
 
@@ -57,14 +56,6 @@ export const adjustColor = (color: string, amount: number) => {
         ).substr(-2)
       )
   );
-};
-
-export const getUniqueColors = (array: Theme[]) => {
-  const flatArray = array.flatMap((theme) => theme.colors);
-
-  return flatArray.filter((value, index, self) => {
-    return self.indexOf(value) === index;
-  });
 };
 
 export const pickRandomColorWithTheme = (

@@ -1,8 +1,3 @@
-export interface Theme {
-  theme: "light" | "dark";
-  colors: string[];
-}
-
 export const EFFECTS = [...new Array(60).fill(null).map(() => 0), 1];
 
 export const INSTRUMENTS = [0, 1];
