@@ -55,8 +55,8 @@ function updateInstancedMeshMatrices({
 
         const activeScale =
           activeShapes.length > 1
-            ? DOUBLE_SIZE * minMaxNumber(scale / 1.08, 1, 2)
-            : DOUBLE_SIZE * scale;
+            ? DOUBLE_SIZE + 0.01 * minMaxNumber(scale / 1.08, 1, 2)
+            : DOUBLE_SIZE + 0.01 * scale;
 
         tempObject.scale.set(activeScale, activeScale, 1.01);
         tempObject.rotation.set(0, 0, 0);
